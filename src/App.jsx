@@ -15,7 +15,7 @@ import { useGraphState } from './hooks/useGraphState';
 import { useAlgorithmRunner } from './hooks/useAlgorithmRunner';
 import { useCanvas } from './hooks/useCanvas';
 import { buildAdjacencyList, buildAdjacencyMatrix } from './utils/graphUtils';
-import { findCycle } from './algorithms';
+import { findCycle, findConnectedComponents } from './algorithms';
 import GraphAnalysisPanel from './components/sidebar/GraphAnalysisPanel';
 
 export default function GraphVisualizer() {
@@ -25,6 +25,14 @@ export default function GraphVisualizer() {
   const [isAboutModalOpen, setIsAboutModalOpen] = useState(false);
   const [canvasSize, setCanvasSize] = useState({ width: 1085, height: 600 });
   const [cycleResult, setCycleResult] = useState(null);
+  const [componentsResult, setComponentsResult] = useState(null);
+
+  const handleFindComponents = () => {
+    resetAlgorithm(); // Clear other algorithm highlights
+    setCycleResult(null); // Clear cycle highlights
+    const result = findConnectedComponents(nodes, edges, graphType);
+    setComponentsResult(result);
+  };
 
   const handleFindCycle = () => {
     resetAlgorithm(); // Clear any running algorithm visualization
@@ -38,7 +46,10 @@ export default function GraphVisualizer() {
     }
   };
 
-  const handleClearCycle = () => setCycleResult(null);
+  const handleClearAnalysis = () => {
+    setCycleResult(null);
+    setComponentsResult(null);
+  };
 
   // 1. Algorithm Runner is independent.
   const {
@@ -56,7 +67,7 @@ export default function GraphVisualizer() {
   } = useGraphState(resetAlgorithm);
 
   // 3. Canvas gets all the data it needs to draw.
-  const algorithmResults = { traversalResult, dijkstraResult, primResult, aStarResult, kruskalResult, topoSortResult, bellmanFordResult, cycleResult, currentAlgorithm };
+  const algorithmResults = { traversalResult, dijkstraResult, primResult, aStarResult, kruskalResult, topoSortResult, bellmanFordResult, cycleResult, componentsResult, currentAlgorithm };
   const {
     canvasRef, containerRef, contextMenu, setContextMenu, closeContextMenu,
         isDrawingEdge, setIsDrawingEdge, hoveredElement, setHoveredElement,
@@ -264,8 +275,10 @@ export default function GraphVisualizer() {
     },
     graphAnalysisPanel: {
       onFindCycle: handleFindCycle,
-      onClearCycle: handleClearCycle,
+      onFindComponents: handleFindComponents,
+      onClearAnalysis: handleClearAnalysis,
       cycleResult,
+      componentsResult,
     }
   };
 

@@ -624,3 +624,107 @@ function dfs(u, parent, visited, recursionStack, adj, path, graphType) {
     }
     return null;
 }
+
+/**
+ * Finds all connected components in an undirected graph, or
+ * all strongly connected components (SCCs) in a directed graph.
+ * @returns {{components: Array<Array<number>>, count: number}}
+ */
+export const findConnectedComponents = (nodes, edges, graphType) => {
+    if (nodes.length === 0) return { components: [], count: 0 };
+
+    if (graphType === 'undirected') {
+        return findUndirectedComponents(nodes, edges);
+    } else {
+        return findStronglyConnectedComponents(nodes, edges);
+    }
+};
+
+// --- Helper for Undirected Graphs ---
+function findUndirectedComponents(nodes, edges) {
+    const adj = buildAdjacencyList(nodes, edges, 'undirected');
+    const visited = new Set();
+    const components = [];
+
+    for (const node of nodes) {
+        if (!visited.has(node.id)) {
+            const component = [];
+            const queue = [node.id];
+            visited.add(node.id);
+            
+            while (queue.length > 0) {
+                const u = queue.shift();
+                component.push(u);
+                
+                const neighbors = adj[u] || [];
+                for (const neighbor of neighbors) {
+                    const v = neighbor.node;
+                    if (!visited.has(v)) {
+                        visited.add(v);
+                        queue.push(v);
+                    }
+                }
+            }
+            components.push(component);
+        }
+    }
+    return { components, count: components.length };
+}
+
+// --- Helper for Directed Graphs (Kosaraju's Algorithm for SCCs) ---
+function findStronglyConnectedComponents(nodes, edges) {
+    const adj = buildAdjacencyList(nodes, edges, 'directed');
+    const visited = new Set();
+    const finishOrderStack = [];
+
+    // 1st Pass: DFS to get the finish order of nodes
+    for (const node of nodes) {
+        if (!visited.has(node.id)) {
+            dfs1(node.id, visited, finishOrderStack, adj);
+        }
+    }
+
+    // 2nd Pass: Get the graph with all edges reversed (transposed)
+    const reversedEdges = edges.map(edge => ({ start: edge.end, end: edge.start, weight: edge.weight }));
+    const adjReversed = buildAdjacencyList(nodes, reversedEdges, 'directed');
+    
+    // 3rd Pass: DFS on the reversed graph in the order of the stack
+    visited.clear();
+    const components = [];
+    while (finishOrderStack.length > 0) {
+        const u = finishOrderStack.pop();
+        if (!visited.has(u)) {
+            const component = [];
+            dfs2(u, visited, component, adjReversed);
+            components.push(component);
+        }
+    }
+
+    return { components, count: components.length };
+}
+
+// Helper DFS for Kosaraju's 1st pass
+function dfs1(u, visited, stack, adj) {
+    visited.add(u);
+    const neighbors = adj[u] || [];
+    for (const neighbor of neighbors) {
+        const v = neighbor.node;
+        if (!visited.has(v)) {
+            dfs1(v, visited, stack, adj);
+        }
+    }
+    stack.push(u);
+}
+
+// Helper DFS for Kosaraju's 2nd pass
+function dfs2(u, visited, component, adjReversed) {
+    visited.add(u);
+    component.push(u);
+    const neighbors = adjReversed[u] || [];
+    for (const neighbor of neighbors) {
+        const v = neighbor.node;
+        if (!visited.has(v)) {
+            dfs2(v, visited, component, adjReversed);
+        }
+    }
+}

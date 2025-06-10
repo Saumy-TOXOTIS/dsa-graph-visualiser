@@ -3,6 +3,17 @@
 import { useRef, useEffect, useState, useCallback } from 'react';
 import { calculateNodeDegrees } from '../utils/graphUtils';
 
+// --- Define an array of colors for the components ---
+const COMPONENT_COLORS = [
+    ['#6EE7B7', '#34D399'], // Emerald
+    ['#FBBF24', '#F59E0B'], // Amber
+    ['#F472B6', '#EC4899'], // Pink
+    ['#93C5FD', '#60A5FA'], // Blue
+    ['#C4B5FD', '#A78BFA'], // Violet
+    ['#FCA5A5', '#F87171'], // Red
+    ['#818CF8', '#6366F1'], // Indigo
+];
+
 export const useCanvas = (
     nodes,
     edges,
@@ -39,7 +50,7 @@ export const useCanvas = (
         gradient.addColorStop(1, theme === 'light' ? '#dbeafe' : '#0f172a');
         ctx.fillStyle = gradient;
         ctx.fillRect(0, 0, canvas.width, canvas.height);
-        const { traversalResult, dijkstraResult, primResult, kruskalResult, aStarResult, topoSortResult, bellmanFordResult, cycleResult, currentAlgorithm } = algorithmResults;
+        const { traversalResult, dijkstraResult, primResult, kruskalResult, aStarResult, topoSortResult, bellmanFordResult, cycleResult, componentsResult, currentAlgorithm } = algorithmResults;
         
         edges.forEach((edge) => {
             const startNode = nodes.find((n) => n.id === edge.start);
@@ -115,6 +126,14 @@ export const useCanvas = (
         nodes.forEach((node) => {
             const isHovered = hoveredElement?.type === 'node' && hoveredElement.id === node.id;
             let nodeState = 'default';
+            let customColor = null;
+            if (componentsResult) {
+                const componentIndex = componentsResult.components.findIndex(comp => comp.includes(node.id));
+                if (componentIndex !== -1) {
+                    // Assign a color from our array, wrapping around if there are many components
+                    customColor = COMPONENT_COLORS[componentIndex % COMPONENT_COLORS.length];
+                }
+            }
             const isCycleNode = cycleResult?.isCyclic && cycleResult.path?.includes(node.id);
             if (isCycleNode) nodeState = 'path';
             if (currentAlgorithm) {
@@ -164,10 +183,16 @@ export const useCanvas = (
             ctx.beginPath();
             ctx.arc(node.x, node.y, 30, 0, Math.PI * 2);
             const nodeGradient = ctx.createRadialGradient(node.x, node.y, 5, node.x, node.y, 30);
-            const colors = { default: ['#3B82F6', '#2563EB'], start: ['#10B981', '#059669'], target: ['#EF4444', '#DC2626'], path: ['#F97316', '#EA580C'], current: ['#EC4899', '#DB2777'], visited: ['#60A5FA', '#3B82F6'], mst: ['#8B5CF6', '#7C3AED'] };
-            const [color1, color2] = isHovered ? ['#60A5FA', '#3B82F6'] : colors[nodeState];
-            nodeGradient.addColorStop(0, color1);
-            nodeGradient.addColorStop(1, color2);
+            if (customColor) {
+                const [color1, color2] = customColor;
+                nodeGradient.addColorStop(0, color1);
+                nodeGradient.addColorStop(1, color2);
+            } else {
+                const colors = { default: ['#3B82F6', '#2563EB'], start: ['#10B981', '#059669'], target: ['#EF4444', '#DC2626'], path: ['#F97316', '#EA580C'], current: ['#EC4899', '#DB2777'], visited: ['#60A5FA', '#3B82F6'], mst: ['#8B5CF6', '#7C3AED'] };
+                const [color1, color2] = isHovered ? ['#60A5FA', '#3B82F6'] : colors[nodeState];
+                nodeGradient.addColorStop(0, color1);
+                nodeGradient.addColorStop(1, color2);
+            }
             ctx.fillStyle = nodeGradient;
             ctx.fill();
             ctx.strokeStyle = isHovered ? '#f59e0b' : '#1E40AF';
