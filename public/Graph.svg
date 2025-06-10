@@ -1,0 +1,32 @@
+<svg width="256" height="256" viewBox="0 0 256 256" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+        <linearGradient id="grad2" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#22D3EE" />
+            <stop offset="100%" stop-color="#818CF8" />
+        </linearGradient>
+        <filter id="pathGlow">
+            <feGaussianBlur in="SourceGraphic" stdDeviation="4" result="blur"/>
+            <feColorMatrix in="blur" mode="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 1 0" result="glow"/>
+            <feComposite in="glow" in2="SourceGraphic" operator="over"/>
+        </filter>
+    </defs>
+
+    <!-- Regular Edges -->
+    <line x1="60" y1="60" x2="196" y2="60" stroke="#4B5563" stroke-width="8" stroke-linecap="round"/>
+    <line x1="60" y1="60" x2="60" y2="196" stroke="#4B5563" stroke-width="8" stroke-linecap="round"/>
+    <line x1="196" y1="60" x2="196" y2="196" stroke="#4B5563" stroke-width="8" stroke-linecap="round"/>
+    
+    <line x1="196" y1="196" x2="128" y2="128" stroke="#4B5563" stroke-width="8" stroke-linecap="round"/>
+
+    <!-- Highlighted Path -->
+    <g filter="url(#pathGlow)">
+      <path d="M60 196 L 128 128 L 196 60" stroke="#A78BFA" stroke-width="10" stroke-linecap="round" fill="none" stroke-dasharray="20 10"/>
+    </g>
+
+    <!-- Nodes -->
+    <circle cx="60" cy="60" r="22" fill="url(#grad2)"/>
+    <circle cx="196" cy="60" r="22" fill="url(#grad2)"/>
+    <circle cx="60" cy="196" r="22" fill="url(#grad2)"/>
+    <circle cx="196" cy="196" r="22" fill="url(#grad2)"/>
+    <circle cx="128" cy="128" r="22" fill="url(#grad2)"/>
+</svg>
