@@ -5,6 +5,7 @@ import GraphInputs from './GraphInputs';
 import GraphConstructorPanel from './GraphConstructorPanel';
 import AlgorithmPanel from './AlgorithmPanel';
 import SavedGraphs from './SavedGraphs';
+import GraphAnalysisPanel from './GraphAnalysisPanel';
 import { ChevronDownIcon } from '@heroicons/react/24/solid';
 
 const SidebarSection = ({ title, children }) => (
@@ -23,6 +24,7 @@ const Sidebar = ({
     graphActions,
     graphInputs,
     graphConstructorPanel,
+    graphAnalysisPanel,
     algoPanel,
     savedGraphs
 }) => {
@@ -38,6 +40,10 @@ const Sidebar = ({
 
             <SidebarSection title="Graph Constructor">
                 <GraphConstructorPanel {...graphConstructorPanel} />
+            </SidebarSection>
+
+            <SidebarSection title="Graph Analysis">
+                <GraphAnalysisPanel {...graphAnalysisPanel} />
             </SidebarSection>
 
             <SidebarSection title="Algorithms">

@@ -39,7 +39,7 @@ export const useCanvas = (
         gradient.addColorStop(1, theme === 'light' ? '#dbeafe' : '#0f172a');
         ctx.fillStyle = gradient;
         ctx.fillRect(0, 0, canvas.width, canvas.height);
-        const { traversalResult, dijkstraResult, primResult, kruskalResult, aStarResult, topoSortResult, bellmanFordResult, currentAlgorithm } = algorithmResults;
+        const { traversalResult, dijkstraResult, primResult, kruskalResult, aStarResult, topoSortResult, bellmanFordResult, cycleResult, currentAlgorithm } = algorithmResults;
         
         edges.forEach((edge) => {
             const startNode = nodes.find((n) => n.id === edge.start);
@@ -62,6 +62,17 @@ export const useCanvas = (
             }
             if (bellmanFordResult?.highlightedEdge === edge.id) {
                 isCurrentEdge = true;
+            }
+            if (cycleResult?.isCyclic) {
+                const path = cycleResult.path;
+                for (let i = 0; i < path.length; i++) {
+                    const u = path[i];
+                    const v = path[(i + 1) % path.length]; // Wrap around for the last edge
+                    if ((edge.start === u && edge.end === v) || (graphType === 'undirected' && edge.start === v && edge.end === u)) {
+                        isPathEdge = true; // Use the same 'path' styling for now
+                        break;
+                    }
+                }
             }
             ctx.beginPath();
             ctx.moveTo(startNode.x, startNode.y);
@@ -104,6 +115,8 @@ export const useCanvas = (
         nodes.forEach((node) => {
             const isHovered = hoveredElement?.type === 'node' && hoveredElement.id === node.id;
             let nodeState = 'default';
+            const isCycleNode = cycleResult?.isCyclic && cycleResult.path?.includes(node.id);
+            if (isCycleNode) nodeState = 'path';
             if (currentAlgorithm) {
                 // ======================== CORE FIX IS HERE ========================
                 // This logic determines the color of a node based on ALL algorithm states.

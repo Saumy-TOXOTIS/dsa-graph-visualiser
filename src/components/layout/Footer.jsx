@@ -13,7 +13,7 @@ const Footer = () => {
     return (
         <footer className="mt-12 py-8 px-4 text-center">
             <div className="text-sm text-gray-500 dark:text-gray-400">
-                Created by <a href="https://github.com/Saumy-TOXOTIS" target="_blank" rel="noopener noreferrer" className="font-semibold text-indigo-500 hover:text-indigo-400">TOXOTIS</a>
+                Created by <a href="https://github.com/Saumy-TOXOTIS" target="_blank" rel="noopener noreferrer" className="font-semibold text-indigo-500 hover:text-indigo-400">Saumy Tiwari</a>
             </div>
             <div className="mt-4 flex justify-center space-x-6">
                 <SocialIcon href="https://github.com/Saumy-TOXOTIS">

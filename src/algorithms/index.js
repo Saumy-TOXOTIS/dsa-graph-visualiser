@@ -568,3 +568,59 @@ export const generateBellmanFordSteps = (nodes, edges, startNodeId) => {
 
     return { steps, distances, predecessors, negativeCycle: finalCyclePath };
 };
+
+/**
+ * Detects the first cycle found in a graph.
+ * Handles both directed and undirected graphs.
+ * @returns {Array<number> | null} - An array of node IDs in the cycle, or null if no cycle.
+ */
+export const findCycle = (nodes, edges, graphType) => {
+    if (nodes.length < 3 && graphType === 'undirected') return null;
+    if (nodes.length < 1) return null;
+
+    const adj = buildAdjacencyList(nodes, edges, graphType);
+    const visited = new Set();
+
+    for (const node of nodes) {
+        if (!visited.has(node.id)) {
+            const path = [node.id];
+            const recursionStack = new Set([node.id]);
+            const cycle = dfs(node.id, -1, visited, recursionStack, adj, path, graphType);
+            if (cycle) {
+                return cycle;
+            }
+        }
+    }
+    return null;
+};
+
+// Helper DFS function for cycle detection
+function dfs(u, parent, visited, recursionStack, adj, path, graphType) {
+    visited.add(u);
+
+    const neighbors = adj[u] || [];
+    for (const neighbor of neighbors) {
+        const v = neighbor.node;
+        
+        if (graphType === 'undirected' && v === parent) {
+            continue; // Don't go back to the immediate parent in an undirected graph
+        }
+
+        if (recursionStack.has(v)) {
+            // Cycle detected!
+            const cycleStartIndex = path.indexOf(v);
+            return path.slice(cycleStartIndex);
+        }
+
+        if (!visited.has(v)) {
+            path.push(v);
+            recursionStack.add(v);
+            const cycle = dfs(v, u, visited, recursionStack, adj, path, graphType);
+            if (cycle) return cycle;
+            // Backtrack
+            path.pop();
+            recursionStack.delete(v);
+        }
+    }
+    return null;
+}
