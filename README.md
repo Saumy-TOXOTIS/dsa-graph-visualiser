@@ -93,8 +93,3 @@ You'll need Node.js and npm installed on your machine.
 *   GitHub: [Saumy-TOXOTIS](https://github.com/Saumy-TOXOTIS)
 
 ---
-
-## 🙏 Acknowledgements
-
-*   Inspired by the beauty of data structures.
-*   A huge thanks to the open-source community for the amazing tools that made this project possible.
