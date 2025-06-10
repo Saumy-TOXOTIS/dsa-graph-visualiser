@@ -17,14 +17,6 @@
   <img src="https://img.shields.io/badge/Framer_Motion-0055FF?style=for-the-badge&logo=framer&logoColor=white" alt="Framer Motion Badge"/>
 </div>
 <br />
-
-<!-- Project Demo GIF or Image -->
-<div align="center">
-  <!-- TODO: Replace this with a high-quality GIF of your application in action! -->
-  <img src="https://user-images.githubusercontent.com/YOUR_GITHUB_USERNAME/YOUR_REPO_NAME/your-demo-image.png" alt="Project Demo" width="800"/>
-  <p><i>A snapshot of the visualizer's intuitive interface.</i></p>
-</div>
-
 ---
 
 ## 🚀 About The Project
@@ -97,8 +89,7 @@ You'll need Node.js and npm installed on your machine.
 
 **TOXOTIS**
 
-*   GitHub: [@YOUR_GITHUB_USERNAME](https://github.com/YOUR_GITHUB_USERNAME)
-*   LinkedIn: [Your LinkedIn Profile](https://linkedin.com/in/your-linkedin-username)
+*   GitHub: [@YOUR_GITHUB_USERNAME](https://github.com/Saumy-TOXOTIS)
 
 ---
 
