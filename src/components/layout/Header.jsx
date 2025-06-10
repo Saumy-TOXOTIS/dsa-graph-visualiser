@@ -12,7 +12,7 @@ const Header = ({ theme, toggleTheme, graphType, setGraphType, onAboutClick }) =
                     animate={{ rotate: 360 }}
                     transition={{ duration: 8, repeat: Infinity, ease: 'linear' }}
                 >
-                    <img src='../../../public/Graph.svg' className='h-20 w-20' ></img>
+                    <img src='/Graph.svg' className='h-20 w-20' ></img>
                 </motion.div>
                 <h1 className="text-3xl md:text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 to-blue-600">
                     DSA Graph Visualizer
