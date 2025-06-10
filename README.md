@@ -90,7 +90,7 @@ You'll need Node.js and npm installed on your machine.
 
 **TOXOTIS**
 
-*   GitHub: [@YOUR_GITHUB_USERNAME](https://github.com/Saumy-TOXOTIS)
+*   GitHub: [Saumy-TOXOTIS](https://github.com/Saumy-TOXOTIS)
 
 ---
 
