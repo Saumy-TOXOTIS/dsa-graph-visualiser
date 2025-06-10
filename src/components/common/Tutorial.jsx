@@ -13,34 +13,68 @@ const Tutorial = ({ show, onHide, step, onStepChange }) => {
 
     return (
         <motion.div
-            className="fixed inset-0 bg-black bg-opacity-70 z-50 flex items-center justify-center p-4"
+            className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
         >
             <motion.div
-                className="bg-white dark:bg-gray-800 rounded-2xl p-6 max-w-md w-full shadow-2xl"
-                initial={{ scale: 0.9 }}
-                animate={{ scale: 1 }}
+                className="bg-gradient-to-br from-white to-gray-50 dark:from-gray-800 dark:to-gray-900 rounded-2xl p-8 max-w-lg w-full shadow-2xl border border-gray-200 dark:border-gray-700"
+                initial={{ y: 20, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                exit={{ y: 20, opacity: 0 }}
+                transition={{ type: 'spring', damping: 25 }}
             >
-                <div className="flex justify-between items-center mb-4">
-                    <h2 className="text-xl font-bold text-gray-900 dark:text-white">Interactive Tutorial</h2>
-                    <button onClick={onHide} className="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300">
-                        <XMarkIcon className="h-6 w-6" />
+                <div className="flex justify-between items-center mb-6">
+                    <div>
+                        <h2 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 to-blue-500 dark:from-indigo-400 dark:to-blue-300">
+                            Interactive Tutorial
+                        </h2>
+                        <div className="flex items-center gap-2 mt-1">
+                            {TUTORIAL_STEPS.map((_, i) => (
+                                <div 
+                                    key={i}
+                                    className={`h-1.5 rounded-full transition-all duration-300 ${i <= step ? 'bg-indigo-500 w-4' : 'bg-gray-300 dark:bg-gray-600 w-2'}`}
+                                />
+                            ))}
+                        </div>
+                    </div>
+                    <button 
+                        onClick={onHide} 
+                        className="p-1.5 rounded-full bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 transition-all"
+                    >
+                        <XMarkIcon className="h-5 w-5" />
                     </button>
                 </div>
 
-                <p className="mb-6 text-gray-700 dark:text-gray-300 min-h-[60px]">
+                <motion.p 
+                    className="mb-8 text-gray-700 dark:text-gray-300 min-h-[100px] text-lg leading-relaxed"
+                    key={step}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.3 }}
+                >
                     {TUTORIAL_STEPS[step]}
-                </p>
+                </motion.p>
 
                 <div className="flex justify-between items-center">
-                    <button onClick={handlePrev} disabled={step === 0} className="px-4 py-2 bg-gray-200 dark:bg-gray-700 rounded-lg disabled:opacity-50 transition">
+                    <button 
+                        onClick={handlePrev} 
+                        disabled={step === 0} 
+                        className="px-5 py-2.5 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 font-medium shadow-sm"
+                    >
                         Previous
                     </button>
 
-                    <button onClick={isLastStep ? onHide : handleNext} className="px-4 py-2 bg-gradient-to-r from-indigo-600 to-blue-600 text-white rounded-lg transition">
-                        {isLastStep ? 'Start Exploring' : 'Next'}
+                    <button 
+                        onClick={isLastStep ? onHide : handleNext} 
+                        className="px-6 py-2.5 bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 text-white rounded-xl shadow-lg hover:shadow-indigo-500/30 transition-all duration-200 font-medium relative overflow-hidden group"
+                    >
+                        <span className="relative z-10">
+                            {isLastStep ? 'Start Exploring' : 'Next'}
+                        </span>
+                        <span className="absolute inset-0 bg-gradient-to-r from-indigo-700 to-blue-700 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
                     </button>
                 </div>
             </motion.div>
