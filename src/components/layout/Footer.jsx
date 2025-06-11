@@ -70,7 +70,7 @@ const Footer = () => {
                 animate={{ opacity: 1 }}
                 transition={{ delay: 0.6 }}
             >
-                © {new Date().getFullYear()} DSA Graph Visualizer. All rights reserved.
+                {new Date().getFullYear()} DSA Graph Visualizer.
             </motion.p>
         </footer>
     );
