@@ -90,11 +90,11 @@ Ensure you have Node.js (v18 or later) and npm installed on your machine.
 
 1.  **Clone the Repository**
     ```sh
-    git clone https://github.com/YOUR_GITHUB_USERNAME/dsa-graph-visualizer.git
+    git clone https://github.com/YOUR_GITHUB_USERNAME/dsa-graph-visualiser.git
     ```
 2.  **Navigate to the Project Directory**
     ```sh
-    cd dsa-graph-visualizer
+    cd dsa-graph-visualiser
     ```
 3.  **Install Dependencies**
     ```sh
@@ -113,8 +113,7 @@ The application will now be running on a local port (usually `http://localhost:5
 
 **Saumy Tiwari (TOXOTIS)**
 
-*   **GitHub:** [@Saumy-TOXOTIS](https://github.com/Saumy-TOXOTIS)
-*   **LinkedIn:** [saumy-tiwari-170b33252](https://linkedin.com/in/saumy-tiwari-170b33252)
+*   **GitHub:** [Saumy-TOXOTIS](https://github.com/Saumy-TOXOTIS)
 
 <br />
 
