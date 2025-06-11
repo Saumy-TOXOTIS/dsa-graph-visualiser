@@ -257,10 +257,17 @@ export const generateBellmanFordSteps = (nodes, edges, startNodeId) => {
                 negativeCycle: null,
             });
 
+            // Check forward direction: start -> end
             if (distances[edge.start] !== Infinity && distances[edge.start] + edge.weight < distances[edge.end]) {
                 distances[edge.end] = distances[edge.start] + edge.weight;
                 predecessors[edge.end] = edge.start;
-                // --- THIS WAS THE MISSING LINE ---
+                relaxedAnEdgeInPass = true;
+            }
+            
+            // Check reverse direction: end -> start
+            if (distances[edge.end] !== Infinity && distances[edge.end] + edge.weight < distances[edge.start]) {
+                distances[edge.start] = distances[edge.end] + edge.weight;
+                predecessors[edge.start] = edge.end;
                 relaxedAnEdgeInPass = true;
             }
         }
