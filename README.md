@@ -98,7 +98,7 @@ Ensure you have Node.js (v18 or later) and npm installed on your machine.
     ```
 3.  **Install Dependencies**
     ```sh
-    npm install --force
+    npm install --legacy-peer-deps
     ```
 4.  **Run the Development Server**
     ```sh
