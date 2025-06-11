@@ -54,6 +54,8 @@ export const useAlgorithmRunner = (nodes, edges) => {
             
             switch (algorithm) {
                 case 'BFS':
+                    setTraversalResult(prev => ({ ...prev, currentStep: step.currentStep, stepIndex: i }));
+                    break;
                 case 'DFS':
                     setTraversalResult(prev => ({ ...prev, currentStep: step.currentStep, stepIndex: i }));
                     break;
