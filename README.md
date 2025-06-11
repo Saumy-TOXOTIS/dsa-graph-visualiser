@@ -98,7 +98,7 @@ Ensure you have Node.js (v18 or later) and npm installed on your machine.
     ```
 3.  **Install Dependencies**
     ```sh
-    npm install
+    npm install --force
     ```
 4.  **Run the Development Server**
     ```sh
