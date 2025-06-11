@@ -23,7 +23,7 @@ export default function GraphVisualizer() {
   const [showTutorial, setShowTutorial] = useState(true);
   const [tutorialStep, setTutorialStep] = useState(0);
   const [isAboutModalOpen, setIsAboutModalOpen] = useState(false);
-  const [canvasSize, setCanvasSize] = useState({ width: 1085, height: 600 });
+  const [canvasSize, setCanvasSize] = useState({ width: 1080, height: 600 });
   const [cycleResult, setCycleResult] = useState(null);
   const [componentsResult, setComponentsResult] = useState(null);
 
@@ -345,7 +345,7 @@ export default function GraphVisualizer() {
 
       <AboutModal isOpen={isAboutModalOpen} onClose={() => setIsAboutModalOpen(false)} />
 
-      <main className="flex flex-col lg:flex-row px-4 gap-6">
+      <main className="mt-6 flex flex-col lg:flex-row px-6 gap-6">
         <Sidebar {...sidebarProps} />
         <div>
           <CanvasArea {...canvasAreaProps} />
