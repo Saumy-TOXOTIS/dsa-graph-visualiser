@@ -33,7 +33,7 @@ const GraphInputs = ({
                     <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-200">Add New Node</h3>
                 </div>
 
-                <div className="flex gap-3">
+                <div className="flex gap-2">
                     <motion.input
                         type="text"
                         value={nodeValue}

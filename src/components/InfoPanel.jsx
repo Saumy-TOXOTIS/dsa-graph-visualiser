@@ -200,7 +200,91 @@ const InfoPanel = ({ nodes, edges, graphType, algoResults }) => {
                         </motion.div>
                     )}
 
-                    {/* Other algorithm result sections with similar enhancements... */}
+                    {aStarResult && (
+                        <div>
+                            <h3 className="font-semibold text-md mb-2 text-indigo-600 dark:text-indigo-400">A* Path</h3>
+                            {aStarResult.path.length > 0 ? (
+                                <>
+                                    <div className="flex flex-wrap gap-1.5 mb-2">
+                                        {aStarResult.path.map((id, idx) => (
+                                            <ResultItem key={idx} node={findNode(id)} type={idx === 0 ? 'start' : (idx === aStarResult.path.length - 1 ? 'target' : 'path')} />
+                                        ))}
+                                    </div>
+                                </>
+                            ) : <p>No path found.</p>}
+                        </div>
+                    )}
+
+                    {primResult && (
+                        <div>
+                            <h3 className="font-semibold text-md mb-2 text-purple-600 dark:text-purple-400">Prim's MST</h3>
+                            <p className="font-medium mb-2">Total Weight: <span className="font-bold">{primResult.mstEdges.reduce((acc, edge) => acc + edge.weight, 0).toFixed(1)}</span></p>
+                            <div className="mt-1 space-y-1">
+                                {primResult.mstEdges.map((edge, idx) => (
+                                    <div key={idx} className="text-sm bg-purple-50 dark:bg-gray-700 p-2 rounded-lg">
+                                        {findNode(edge.from)?.value || '?'} ↔ {findNode(edge.to)?.value || '?'} (w: {edge.weight.toFixed(1)})
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Kruskal's MST Results */}
+                    {kruskalResult && kruskalResult.mstEdges && (
+                        <div>
+                            <h3 className="font-semibold text-md mb-2 text-purple-600 dark:text-purple-400">Prim's MST</h3>
+                            <p className="font-medium mb-2">Total Weight: <span className="font-bold">{kruskalResult.mstEdges.reduce((acc, edge) => acc + edge.weight, 0).toFixed(1)}</span></p>
+                            <div className="mt-1 space-y-1">
+                                {kruskalResult.mstEdges.map((edge, idx) => (
+                                    <div key={idx} className="text-sm bg-violet-50 dark:bg-gray-700/50 p-2 rounded-lg">
+                                        {findNode(edge.start)?.value || '?'} ↔ {findNode(edge.end)?.value || '?'} (w: {edge.weight.toFixed(1)})
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+                    
+                    {/* Bellman-Ford Results */}
+                    {bellmanFordResult && (
+                        <div>
+                            <h3 className="font-semibold text-md mb-2 text-orange-600 dark:text-orange-400">Bellman-Ford Result</h3>
+                            {bellmanFordResult.negativeCycle ? (
+                                <p className="text-red-500 font-bold">Error: Negative Weight Cycle Detected!</p>
+                            ) : (
+                                <div>
+                                    <p className="mb-2">Final shortest path distances:</p>
+                                    <div className="grid grid-cols-2 gap-2">
+                                        {Object.entries(bellmanFordResult.distances).map(([nodeId, dist]) => (
+                                            <div key={nodeId} className="bg-gray-100 dark:bg-gray-700 p-2 rounded">
+                                                <span>{nodes.find(n => n.id === parseInt(nodeId))?.value || '?'}: </span>
+                                                <span className="font-bold">{dist === Infinity ? '∞' : dist.toFixed(1)}</span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+                            <p className="mt-2 text-xs italic text-gray-500">{bellmanFordResult.description}</p>
+                        </div>
+                    )}
+
+                    {/* Topological Sort Results */}
+                    {topoSortResult && (
+                        <div>
+                            <h3 className="font-semibold text-md mb-2 text-sky-600 dark:text-sky-400">Topological Sort Result</h3>
+                            {topoSortResult.cycleDetected ? (
+                                <p className="text-red-500 font-bold">Error: Cycle Detected! A topological sort is not possible.</p>
+                            ) : (
+                                <>
+                                    <p className="mb-2">{topoSortResult.description}</p>
+                                    <div className="flex flex-wrap gap-1.5">
+                                        {topoSortResult.sortedOrder?.map((id, idx) => (
+                                            <ResultItem key={idx} node={findNode(id)} type={'visited'} />
+                                        ))}
+                                    </div>
+                                </>
+                            )}
+                        </div>
+                    )}
 
                     {!traversalResult && !dijkstraResult && !primResult && !aStarResult && !topoSortResult && !bellmanFordResult && !kruskalResult && (
                         <motion.div 
