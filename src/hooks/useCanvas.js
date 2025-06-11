@@ -14,6 +14,132 @@ const COMPONENT_COLORS = [
     ['#818CF8', '#6366F1'], // Indigo
 ];
 
+// This simple helper darkens a hex color without needing a new library.
+const darkenColor = (hex, percent) => {
+    hex = hex.replace(/^\s*#|\s*$/g, '');
+    if(hex.length == 3) {
+        hex = hex.replace(/(.)/g, '$1$1');
+    }
+    const r = parseInt(hex.substring(0, 2), 16);
+    const g = parseInt(hex.substring(2, 4), 16);
+    const b = parseInt(hex.substring(4, 6), 16);
+
+    const newR = Math.max(0, Math.floor(r * (100 - percent) / 100));
+    const newG = Math.max(0, Math.floor(g * (100 - percent) / 100));
+    const newB = Math.max(0, Math.floor(b * (100 - percent) / 100));
+
+    return `#${(newR).toString(16).padStart(2, '0')}${(newG).toString(16).padStart(2, '0')}${(newB).toString(16).padStart(2, '0')}`;
+}
+
+// This function determines the style of a NODE based on all possible states.
+const getNodeStyle = (node, isHovered, algorithmResults, edges) => {
+    const { traversalResult, dijkstraResult, primResult, kruskalResult, aStarResult, topoSortResult, bellmanFordResult, cycleResult, componentsResult, currentAlgorithm } = algorithmResults;
+    
+    let state = 'default';
+    let shouldPulse = false;
+
+    if (currentAlgorithm) {
+        // --- Highest Priority: Being the "Current" Node ---
+        if (
+            (traversalResult?.currentStep === node.id) ||
+            (dijkstraResult?.currentStep === node.id) ||
+            (primResult?.currentStep === node.id) ||
+            (aStarResult?.current === node.id) ||
+            (topoSortResult?.currentNode === node.id) ||
+            (kruskalResult?.currentEdgeId && (edges.find(e => e.id === kruskalResult.currentEdgeId)?.start === node.id || edges.find(e => e.id === kruskalResult.currentEdgeId)?.end === node.id)) ||
+            (bellmanFordResult?.highlightedEdge && (edges.find(e => e.id === bellmanFordResult.highlightedEdge)?.start === node.id || edges.find(e => e.id === bellmanFordResult.highlightedEdge)?.end === node.id))
+        ) {
+            state = 'current';
+            shouldPulse = true;
+        }
+        // --- Next Priority: Being part of a final Path or Cycle ---
+        else if (
+            (dijkstraResult?.path.includes(node.id)) ||
+            (aStarResult?.path.includes(node.id)) ||
+            (cycleResult?.isCyclic && cycleResult.path?.includes(node.id)) ||
+            (bellmanFordResult?.negativeCycle?.includes(node.id))
+        ) {
+            state = 'path';
+        }
+        // --- Next Priority: Being a Start or Target Node ---
+        else if (dijkstraResult?.path[0] === node.id || aStarResult?.start === node.id) {
+            state = 'start';
+        } else if (dijkstraResult?.path[dijkstraResult.path.length - 1] === node.id || aStarResult?.target === node.id) {
+            state = 'target';
+        }
+        // --- Next Priority: Being part of an MST ---
+        else if (
+            (primResult?.mstNodes.includes(node.id)) ||
+            (kruskalResult?.mstEdgeIds ? edges.filter(e => kruskalResult.mstEdgeIds.includes(e.id)).flatMap(e => [e.start, e.end]).includes(node.id) : false)
+        ) {
+            state = 'mst';
+        }
+        // --- Lowest Priority: Being "Visited" ---
+        else if (
+            (traversalResult?.visitedOrder.includes(node.id)) ||
+            (dijkstraResult?.visitedOrder.includes(node.id)) ||
+            (aStarResult?.visitedOrder.includes(node.id)) ||
+            (topoSortResult?.sortedOrder?.includes(node.id))
+        ) {
+            state = 'visited';
+        }
+    }
+
+    if (topoSortResult?.cycleDetected && topoSortResult.cycleNodes?.includes(node.id)) {
+        state = 'target'; // Use red for cycle nodes
+    }
+
+    // Hover state overrides everything except pulsing
+    if (isHovered) {
+        state = 'hover';
+    }
+
+    return { state, shouldPulse };
+};
+
+// This function determines the style of an EDGE
+const getEdgeStyle = (edge, isHovered, algorithmResults, graphType, cycleResult) => {
+    const { dijkstraResult, primResult, kruskalResult, aStarResult, bellmanFordResult } = algorithmResults;
+    
+    let state = 'default';
+    let isRejected = false;
+
+    if (kruskalResult?.currentEdgeId === edge.id && kruskalResult.stepType === 'reject') {
+        isRejected = true;
+    } else if (
+        (dijkstraResult?.pathEdges.includes(edge.id)) ||
+        (aStarResult?.pathEdges.includes(edge.id)) ||
+        (primResult?.mstEdgeIds?.includes(edge.id)) ||
+        (kruskalResult?.mstEdgeIds?.includes(edge.id)) ||
+        (cycleResult?.isCyclic && isEdgeInPath(edge, cycleResult.path, graphType))
+    ) {
+        state = 'path';
+    } else if (
+        (kruskalResult?.currentEdgeId === edge.id) ||
+        (bellmanFordResult?.highlightedEdge === edge.id)
+    ) {
+        state = 'current';
+    }
+
+    if (isHovered) {
+        state = 'hover';
+    }
+    
+    return { state, isRejected };
+};
+
+// Helper to check if an edge is part of a cycle path
+const isEdgeInPath = (edge, path, graphType) => {
+    for (let i = 0; i < path.length; i++) {
+        const u = path[i];
+        const v = path[(i + 1) % path.length];
+        if ((edge.start === u && edge.end === v) || (graphType === 'undirected' && edge.start === v && edge.end === u)) {
+            return true;
+        }
+    }
+    return false;
+}
+
 export const useCanvas = (
     nodes,
     edges,
@@ -31,6 +157,7 @@ export const useCanvas = (
     const [contextMenu, setContextMenu] = useState({ visible: false, x: 0, y: 0, nodeId: null, edgeId: null });
     const [isDrawingEdge, setIsDrawingEdge] = useState(null);
     const [nodeDegrees, setNodeDegrees] = useState({});
+    const animationFrameRef = useRef();
 
     useEffect(() => {
         setNodeDegrees(calculateNodeDegrees(nodes, edges));
@@ -51,59 +178,29 @@ export const useCanvas = (
         ctx.fillStyle = gradient;
         ctx.fillRect(0, 0, canvas.width, canvas.height);
         const { traversalResult, dijkstraResult, primResult, kruskalResult, aStarResult, topoSortResult, bellmanFordResult, cycleResult, componentsResult, currentAlgorithm } = algorithmResults;
+        const colors = {
+            default: '#3B82F6', hover: '#F59E0B', visited: '#60A5FA', current: '#EC4899',
+            path: '#10B981', mst: '#8B5CF6', start: '#10B981', target: '#EF4444',
+            edgeDefault: theme === 'light' ? '#4B5563' : '#D1D5DB', edgeRejected: '#ef4444'
+        };
         
         edges.forEach((edge) => {
-            const startNode = nodes.find((n) => n.id === edge.start);
-            const endNode = nodes.find((n) => n.id === edge.end);
+            const startNode = nodes.find(n => n.id === edge.start);
+            const endNode = nodes.find(n => n.id === edge.end);
             if (!startNode || !endNode) return;
             const isHovered = hoveredElement?.type === 'edge' && hoveredElement.id === edge.id;
-            // --- NEW: Check if the edge should be highlighted ---
-            let isPathEdge = false;
-            let isRejectedEdge = false;
-            let isCurrentEdge = false;
-            if (dijkstraResult && dijkstraResult.pathEdges.includes(edge.id)) isPathEdge = true;
-            if (aStarResult && aStarResult.pathEdges.includes(edge.id)) isPathEdge = true;
-            if (primResult && primResult.mstEdgeIds?.includes(edge.id)) isPathEdge = true;
-            if (kruskalResult?.mstEdgeIds?.includes(edge.id)) isPathEdge = true;
-            if (kruskalResult?.currentEdgeId === edge.id) {
-                isCurrentEdge = true;
-                if (kruskalResult.stepType === 'reject') {
-                    isRejectedEdge = true;
-                }
-            }
-            if (bellmanFordResult?.highlightedEdge === edge.id) {
-                isCurrentEdge = true;
-            }
-            if (cycleResult?.isCyclic) {
-                const path = cycleResult.path;
-                for (let i = 0; i < path.length; i++) {
-                    const u = path[i];
-                    const v = path[(i + 1) % path.length]; // Wrap around for the last edge
-                    if ((edge.start === u && edge.end === v) || (graphType === 'undirected' && edge.start === v && edge.end === u)) {
-                        isPathEdge = true; // Use the same 'path' styling for now
-                        break;
-                    }
-                }
-            }
+            
+            const style = getEdgeStyle(edge, isHovered, algorithmResults, graphType, algorithmResults.cycleResult);
+
             ctx.beginPath();
             ctx.moveTo(startNode.x, startNode.y);
             ctx.lineTo(endNode.x, endNode.y);
-            // Apply special styling for path edges
-            if (isPathEdge) {
-                ctx.strokeStyle = '#10B981'; // Green for accepted MST/Path
-                ctx.lineWidth = 4;
-            } else if (isRejectedEdge) {
-                ctx.strokeStyle = '#ef4444'; // Red for rejected
-                ctx.lineWidth = 2;
-                ctx.setLineDash([5, 5]);
-            } else if (isCurrentEdge) {
-                ctx.strokeStyle = '#f59e0b'; // Yellow for considering
-                ctx.lineWidth = 4;
-            } else {
-                ctx.strokeStyle = isHovered ? '#f59e0b' : (theme === "light" ? '#4B5563' : '#D1D5DB');
-                ctx.lineWidth = isHovered ? 4 : 2;
-            }
+
+            ctx.strokeStyle = style.isRejected ? colors.edgeRejected : (colors[style.state] || colors.edgeDefault);
+            ctx.lineWidth = (style.state === 'path' || style.state === 'current' || style.state === 'hover') ? 4 : (style.isRejected ? 2 : 2);
+            ctx.setLineDash(style.isRejected ? [5, 5] : []);
             ctx.stroke();
+            ctx.setLineDash([]);
             ctx.fillStyle = isHovered ? '#f59e0b' : (theme === "light" ? '#1F2937' : '#D1D5DB');
             ctx.font = 'bold 14px sans-serif';
             ctx.textAlign = 'center';
@@ -125,74 +222,30 @@ export const useCanvas = (
         
         nodes.forEach((node) => {
             const isHovered = hoveredElement?.type === 'node' && hoveredElement.id === node.id;
-            let nodeState = 'default';
-            let customColor = null;
-            if (componentsResult) {
-                const componentIndex = componentsResult.components.findIndex(comp => comp.includes(node.id));
-                if (componentIndex !== -1) {
-                    // Assign a color from our array, wrapping around if there are many components
-                    customColor = COMPONENT_COLORS[componentIndex % COMPONENT_COLORS.length];
-                }
-            }
-            const isCycleNode = cycleResult?.isCyclic && cycleResult.path?.includes(node.id);
-            if (isCycleNode) nodeState = 'path';
-            if (currentAlgorithm) {
-                // ======================== CORE FIX IS HERE ========================
-                // This logic determines the color of a node based on ALL algorithm states.
-                const isStart = (dijkstraResult?.path[0] === node.id) || (aStarResult?.start === node.id);
-                const isTarget = (dijkstraResult?.path[dijkstraResult.path.length - 1] === node.id) || (aStarResult?.target === node.id);
-                const isInPath = (dijkstraResult?.path.includes(node.id)) || (aStarResult?.path.includes(node.id));
-                const isVisited = (traversalResult?.visitedOrder.slice(0, (traversalResult.stepIndex ?? -1) + 1).includes(node.id)) || (dijkstraResult?.visitedOrder.includes(node.id)) || (aStarResult?.visitedOrder.includes(node.id));
-                const isCurrent = (traversalResult?.currentStep === node.id) || (dijkstraResult?.currentStep === node.id) || (primResult?.currentStep === node.id) || (aStarResult?.currentStep === node.id);
-                const isMstNode = primResult?.mstNodes.includes(node.id);
+            const style = getNodeStyle(node, isHovered, algorithmResults, edges);
+            
+            const pulseSize = style.shouldPulse ? 4 * (Math.sin(Date.now() / 200) + 1) : 0;
+            const radius = 30 + pulseSize;
 
-                // Kruskal's specific node highlighting
-                let isKruskalConsidering = false;
-                if (kruskalResult?.currentEdgeId) {
-                    const currentEdge = edges.find(e => e.id === kruskalResult.currentEdgeId);
-                    if (currentEdge && (currentEdge.start === node.id || currentEdge.end === node.id)) {
-                        isKruskalConsidering = true;
-                    }
-                }
-                const isKruskalMstNode = kruskalResult?.mstEdgeIds ? edges.filter(e => kruskalResult.mstEdgeIds.includes(e.id)).flatMap(e => [e.start, e.end]).includes(node.id) : false;
-
-                // Topological Sort specific node highlighting
-                const isTopoCycleNode = topoSortResult?.cycleDetected && topoSortResult.cycleNodes?.includes(node.id);
-                const isTopoVisitedNode = topoSortResult?.sortedOrder?.includes(node.id);
-                const isTopoCurrentNode = topoSortResult?.currentNode === node.id;
-                let isBellmanFordActive = false;
-                if (bellmanFordResult?.highlightedEdge) {
-                    const currentEdge = edges.find(e => e.id === bellmanFordResult.highlightedEdge);
-                    if (currentEdge && (currentEdge.start === node.id || currentEdge.end === node.id)) {
-                        isBellmanFordActive = true;
-                    }
-                }
-                const isBellmanFordCycleNode = bellmanFordResult?.negativeCycle?.includes(node.id);
-                
-                // Set nodeState based on a clear priority
-                if (isStart) nodeState = 'start';
-                else if (isTarget) nodeState = 'target';
-                else if (isTopoCycleNode) nodeState = 'target'; // Use red for cycle nodes
-                else if (isInPath) nodeState = 'path';
-                else if (isCurrent || isTopoCurrentNode) nodeState = 'current'; // Pink for current
-                else if (isKruskalConsidering || isBellmanFordActive) nodeState = 'current'; // Also use pink for consideration
-                else if (isVisited || isTopoVisitedNode) nodeState = 'visited'; // Blue for visited
-                else if (isMstNode || isKruskalMstNode) nodeState = 'mst'; // Purple for MST
-                else if (isBellmanFordCycleNode) nodeState = 'target';
-            }
             ctx.beginPath();
-            ctx.arc(node.x, node.y, 30, 0, Math.PI * 2);
-            const nodeGradient = ctx.createRadialGradient(node.x, node.y, 5, node.x, node.y, 30);
-            if (customColor) {
-                const [color1, color2] = customColor;
-                nodeGradient.addColorStop(0, color1);
-                nodeGradient.addColorStop(1, color2);
-            } else {
-                const colors = { default: ['#3B82F6', '#2563EB'], start: ['#10B981', '#059669'], target: ['#EF4444', '#DC2626'], path: ['#F97316', '#EA580C'], current: ['#EC4899', '#DB2777'], visited: ['#60A5FA', '#3B82F6'], mst: ['#8B5CF6', '#7C3AED'] };
-                const [color1, color2] = isHovered ? ['#60A5FA', '#3B82F6'] : colors[nodeState];
-                nodeGradient.addColorStop(0, color1);
-                nodeGradient.addColorStop(1, color2);
+            ctx.arc(node.x, node.y, radius, 0, Math.PI * 2);
+
+            let nodeColor = colors[style.state] || colors.default;
+
+            // Handle component coloring override
+            if(algorithmResults.componentsResult) {
+                const componentIndex = algorithmResults.componentsResult.components.findIndex(comp => comp.includes(node.id));
+                if (componentIndex !== -1) {
+                    nodeColor = COMPONENT_COLORS[componentIndex % COMPONENT_COLORS.length][0];
+                }
             }
+
+            // Create gradient from the final color
+            const nodeGradient = ctx.createRadialGradient(node.x, node.y, 5, node.x, node.y, radius);
+            nodeGradient.addColorStop(0, nodeColor);
+            // We now use our own darkenColor function instead of the undefined tinycolor
+            nodeGradient.addColorStop(1, darkenColor(nodeColor, 15));
+            
             ctx.fillStyle = nodeGradient;
             ctx.fill();
             ctx.strokeStyle = isHovered ? '#f59e0b' : '#1E40AF';
@@ -252,7 +305,17 @@ export const useCanvas = (
     }, [nodes, edges, theme, hoveredElement, algorithmResults, isDrawingEdge, nodeDegrees, graphType]);
 
     useEffect(() => {
-        drawGraph();
+        let isAnimating = true;
+        const renderLoop = () => {
+            if (!isAnimating) return;
+            drawGraph();
+            animationFrameRef.current = requestAnimationFrame(renderLoop);
+        };
+        renderLoop();
+        return () => {
+            isAnimating = false;
+            cancelAnimationFrame(animationFrameRef.current);
+        };
     }, [drawGraph]);
 
     useEffect(() => {
