@@ -83,7 +83,7 @@ export const useAlgorithmRunner = (nodes, edges) => {
                     break;
                 }
                 case 'TopologicalSort': {
-                    setTopoSortResult(step);
+                    setTopoSortResult(prev => ({...prev, ...step, stepIndex: i}));
                     break;
                 }
                 default:
@@ -202,9 +202,10 @@ export const useAlgorithmRunner = (nodes, edges) => {
             }
             case 'TopologicalSort': {
                 const result = algo.generateTopologicalSortSteps(nodes, edges);
-                if (result.steps.length > 0) {
+                if (result.steps.length) {
                     stepsRef.current = result.steps;
-                    setTopoSortResult({ sortedOrder: [], cycleDetected: false }); // Initialize
+                    // --- UPDATED: Initialize the state for TopoSort ---
+                    setTopoSortResult({ ...result, ...result.steps[0], stepIndex: -1 });
                     animate('TopologicalSort');
                 }
                 break;

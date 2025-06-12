@@ -294,16 +294,39 @@ const InfoPanel = ({ nodes, edges, graphType, algoResults }) => {
 
                     {topoSortResult && (
                         <div>
-                            <h3 className="font-semibold text-md mb-2 text-sky-600 dark:text-sky-400">Topological Sort Result</h3>
+                            <h3 className="font-semibold text-md mb-2 text-sky-600 dark:text-sky-400">Topological Sort</h3>
+                            <p className="mb-3 text-xs italic text-gray-500">{topoSortResult.description}</p>
+                            
                             {topoSortResult.cycleDetected ? (
                                 <p className="text-red-500 font-bold">Error: Cycle Detected! A topological sort is not possible.</p>
                             ) : (
                                 <>
-                                    <p className="mb-2">{topoSortResult.description}</p>
-                                    <div className="flex flex-wrap gap-1.5">
-                                        {topoSortResult.sortedOrder?.map((id, idx) => (
-                                            <ResultItem key={idx} node={findNode(id)} type={'visited'} />
-                                        ))}
+                                    <div className="mb-3">
+                                        <h4 className="font-semibold text-xs uppercase text-gray-500 mb-1">In-Degrees</h4>
+                                        <div className="grid grid-cols-3 gap-1 text-xs">
+                                            {nodes.map(node => (
+                                                <div key={node.id} className="bg-gray-100 dark:bg-gray-700 p-1 rounded">
+                                                    <span>{node.value}: </span>
+                                                    <span className="font-bold">{topoSortResult.inDegrees?.[node.id] ?? '?'}</span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                    <div className="mb-3">
+                                        <h4 className="font-semibold text-xs uppercase text-gray-500 mb-1">Queue</h4>
+                                        <div className="flex flex-wrap gap-1.5 p-2 bg-gray-100 dark:bg-gray-700 rounded">
+                                            {topoSortResult.queue?.length > 0 ? topoSortResult.queue.map((id, idx) => (
+                                                <ResultItem key={idx} node={findNode(id)} type={'default'} />
+                                            )) : <span className="text-gray-500 text-xs italic">empty</span>}
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <h4 className="font-semibold text-xs uppercase text-gray-500 mb-1">Sorted Order</h4>
+                                        <div className="flex flex-wrap gap-1.5">
+                                            {topoSortResult.sortedOrder?.map((id, idx) => (
+                                                <ResultItem key={idx} node={findNode(id)} type={'visited'} />
+                                            ))}
+                                        </div>
                                     </div>
                                 </>
                             )}

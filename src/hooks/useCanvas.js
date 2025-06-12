@@ -35,16 +35,17 @@ const getNodeStyle = (node, isHovered, algorithmResults, edges) => {
             return edge && (edge.start === node.id || edge.end === node.id);
         };
 
-        if (bellmanFordResult?.negativeCyclePath?.includes(node.id)) { state = 'target'; shouldPulse = true; }
+        if (topoSortResult?.cycleNodes?.includes(node.id)) { state = 'target'; shouldPulse = true; }
+        else if (bellmanFordResult?.negativeCyclePath?.includes(node.id)) { state = 'target'; shouldPulse = true; }
         else if (
+            (currentAlgorithm === 'TopologicalSort' && topoSortResult?.currentNodeId === node.id) ||
             (currentAlgorithm === 'Prim' && primResult?.currentNodeId === node.id) ||
             (currentAlgorithm === 'BFS' && traversalResult?.currentStep === node.id) ||
             (currentAlgorithm === 'DFS' && traversalResult?.currentNode === node.id) ||
             (currentAlgorithm === 'Dijkstra' && dijkstraResult?.currentNodeId === node.id) ||
             (currentAlgorithm === 'AStar' && aStarResult?.currentNodeId === node.id) ||
             (currentAlgorithm === 'BellmanFord' && bellmanFordResult?.updatedNodeId === node.id) ||
-            (currentAlgorithm === 'Kruskal' && kruskalResult.type === 'accept_edge' && isCurrentEdgeNode(kruskalResult.currentEdgeId)) ||
-            (topoSortResult?.currentNode === node.id)
+            (currentAlgorithm === 'Kruskal' && kruskalResult.type === 'accept_edge' && isCurrentEdgeNode(kruskalResult.currentEdgeId))
         ) { state = 'current'; shouldPulse = true; }
         else if (currentAlgorithm === 'BellmanFord' && bellmanFordResult?.highlightedEdgeId && isCurrentEdgeNode(bellmanFordResult.highlightedEdgeId)) state = 'exploring';
         else if (currentAlgorithm === 'AStar' && aStarResult?.openSet?.has(node.id)) state = 'openSet';
@@ -72,10 +73,14 @@ const getNodeStyle = (node, isHovered, algorithmResults, edges) => {
 };
 
 const getEdgeStyle = (edge, isHovered, algorithmResults, graphType) => {
-    const { traversalResult, dijkstraResult, primResult, kruskalResult, aStarResult, bellmanFordResult, cycleResult, currentAlgorithm } = algorithmResults;
+    const { traversalResult, dijkstraResult, primResult, kruskalResult, aStarResult, topoSortResult, bellmanFordResult, cycleResult, currentAlgorithm } = algorithmResults;
     let state = 'default', isRejected = false;
 
-    if (currentAlgorithm === 'Kruskal' && kruskalResult) {
+    if (currentAlgorithm === 'TopologicalSort' && topoSortResult) {
+        if (topoSortResult.processedEdgeId === edge.id) state = 'exploring';
+        else if(topoSortResult.sortedOrder?.includes(edge.start)) state = 'visited';
+    }
+    else if (currentAlgorithm === 'Kruskal' && kruskalResult) {
         const mstEdgeIds = kruskalResult.mstEdges?.map(e => e.id) || [];
         if (mstEdgeIds.includes(edge.id)) state = 'mst';
         else if (kruskalResult.currentEdgeId === edge.id) {

@@ -633,92 +633,96 @@ export const generateKruskalSteps = (nodes, edges) => {
 export const generateTopologicalSortSteps = (nodes, edges) => {
     const steps = [];
     const sortedOrder = [];
+    const adj = buildAdjacencyList(nodes, edges, 'directed');
 
-    // 1. Calculate in-degrees for every node.
     const inDegree = {};
     nodes.forEach(node => inDegree[node.id] = 0);
     edges.forEach(edge => {
-        if (inDegree[edge.end] !== undefined) {
-            inDegree[edge.end]++;
-        }
+        if (inDegree[edge.end] !== undefined) inDegree[edge.end]++;
     });
 
-    // 2. Initialize a queue with all nodes that have an in-degree of 0.
-    const queue = nodes.filter(node => inDegree[node.id] === 0);
+    const queue = nodes.filter(node => inDegree[node.id] === 0).map(n => n.id);
 
     steps.push({
-        description: "Calculated all in-degrees. Initializing queue with nodes having an in-degree of 0.",
+        type: 'initial',
+        description: "Calculated all in-degrees. Initializing queue.",
         inDegrees: { ...inDegree },
-        queue: [...queue.map(n => n.id)],
+        queue: [...queue],
         sortedOrder: [],
-        currentNode: null,
+        currentNodeId: null,
+        processedEdgeId: null,
     });
 
-    // 3. Process the queue.
     let visitedCount = 0;
     while (queue.length > 0) {
-        const u = queue.shift();
-        sortedOrder.push(u.id);
+        const uId = queue.shift();
+        sortedOrder.push(uId);
         visitedCount++;
 
         steps.push({
-            description: `Dequeued node ${u.value} and added it to the sorted list.`,
+            type: 'dequeue',
+            description: `Dequeued node and added to sorted list.`,
             inDegrees: { ...inDegree },
-            queue: [...queue.map(n => n.id)],
+            queue: [...queue],
             sortedOrder: [...sortedOrder],
-            currentNode: u.id,
+            currentNodeId: uId,
+            processedEdgeId: null,
         });
 
-        // Find all neighbors of u and decrease their in-degree.
-        const neighbors = edges.filter(edge => edge.start === u.id);
-        for (const edge of neighbors) {
-            const v_id = edge.end;
-            if (inDegree[v_id] !== undefined) {
-                inDegree[v_id]--;
+        const neighbors = adj[uId] || [];
+        for (const neighbor of neighbors) {
+            const vId = neighbor.node;
+            if (inDegree[vId] !== undefined) {
+                inDegree[vId]--;
 
-                // If a neighbor's in-degree becomes 0, add it to the queue.
-                if (inDegree[v_id] === 0) {
-                    const v_node = nodes.find(n => n.id === v_id);
-                    if (v_node) queue.push(v_node);
+                steps.push({
+                    type: 'process_neighbor',
+                    description: `Processing neighbor, decrementing in-degree.`,
+                    inDegrees: { ...inDegree },
+                    queue: [...queue],
+                    sortedOrder: [...sortedOrder],
+                    currentNodeId: uId,
+                    processedEdgeId: neighbor.edgeId,
+                });
+
+                if (inDegree[vId] === 0) {
+                    queue.push(vId);
+                     steps.push({
+                        type: 'enqueue',
+                        description: `Neighbor's in-degree is 0. Enqueueing.`,
+                        inDegrees: { ...inDegree },
+                        queue: [...queue],
+                        sortedOrder: [...sortedOrder],
+                        currentNodeId: vId,
+                        processedEdgeId: neighbor.edgeId,
+                    });
                 }
             }
         }
-
-        steps.push({
-            description: `Decremented in-degrees for neighbors of ${u.value}.`,
-            inDegrees: { ...inDegree },
-            queue: [...queue.map(n => n.id)],
-            sortedOrder: [...sortedOrder],
-            currentNode: u.id,
-        });
     }
 
-    // 4. Check for cycles.
     if (visitedCount !== nodes.length) {
-        // Find nodes involved in the cycle (nodes with in-degree > 0)
         const cycleNodes = nodes
             .filter(node => inDegree[node.id] > 0)
             .map(node => node.id);
-
         steps.push({
-            description: `Error: Cycle detected! Not all nodes were visited. The remaining nodes form a cycle.`,
+            type: 'cycle_detected',
+            description: `Error: Cycle detected! Not a DAG.`,
             inDegrees: { ...inDegree },
             queue: [],
             sortedOrder: [...sortedOrder],
-            currentNode: null,
-            cycleDetected: true,
-            cycleNodes: cycleNodes
+            cycleNodes,
         });
         return { steps, sortedOrder, cycleDetected: true, cycleNodes };
     }
 
     steps.push({
+        type: 'done',
         description: "Topological sort complete!",
         inDegrees: { ...inDegree },
         queue: [],
         sortedOrder: [...sortedOrder],
-        currentNode: null,
-        cycleDetected: false
+        cycleDetected: false,
     });
 
     return { steps, sortedOrder, cycleDetected: false };
