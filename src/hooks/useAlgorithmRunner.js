@@ -54,21 +54,14 @@ export const useAlgorithmRunner = (nodes, edges) => {
             
             switch (algorithm) {
                 case 'BFS':
-                    setTraversalResult(prev => ({
-                        ...prev,
-                        currentStep: step.currentStep,
-                        sourceNode: step.sourceNode,
-                        currentEdgeId: step.edgeId,
-                        exploringEdgeIds: step.exploringEdgeIds,
-                        stepIndex: i
-                    }));
+                    setTraversalResult(prev => ({ ...prev, ...step, stepIndex: i }));
                     break;
                 case 'DFS':
                      // --- UPDATED: Pass the entire new DFS step object ---
                     setTraversalResult(prev => ({ ...prev, ...step, stepIndex: i }));
                     break;
                 case 'Dijkstra':
-                    setDijkstraResult(prev => ({ ...prev, currentStep: step.currentStep, visitedOrder: step.visitedOrder, stepIndex: i }));
+                    setDijkstraResult(prev => ({ ...prev, ...step, stepIndex: i }));
                     break;
                 case 'Prim': {
                     const mstEdgeIds = step.mstEdges.map(e => {
@@ -151,9 +144,15 @@ export const useAlgorithmRunner = (nodes, edges) => {
             }
             case 'Dijkstra': {
                 const result = algo.generateDijkstraResult(nodes, edges, graphType, dijkstraStart, dijkstraTarget);
-                if (result) {
+                if (result && result.steps.length > 0) {
                     stepsRef.current = result.steps;
-                    setDijkstraResult({ ...result, currentStep: null, stepIndex: -1 });
+                    // --- UPDATED: Initialize the state for Dijkstra ---
+                    setDijkstraResult({
+                        ...result,
+                        currentNodeId: null,
+                        relaxingEdgeId: null,
+                        stepIndex: -1,
+                    });
                     animate('Dijkstra');
                 }
                 break;

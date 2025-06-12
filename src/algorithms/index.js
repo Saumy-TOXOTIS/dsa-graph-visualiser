@@ -121,77 +121,105 @@ export const generateDfsSteps = (nodes, edges, graphType, startNode) => {
 
 /* ==== Dijkstra ==== */
 
-export const generateDijkstraResult = (nodes, edges, graphType, dijkstraStart, dijkstraTarget) => {
-    if (!dijkstraStart || !dijkstraTarget || nodes.length === 0) return null;
+export const generateDijkstraResult = (nodes, edges, graphType, startId, targetId) => {
+    if (!startId || !targetId || nodes.length === 0) return null;
 
     const adjacencyList = buildAdjacencyList(nodes, edges, graphType);
     const distances = {};
-    const previous = {};
+    const previous = {}; // Will store { nodeId, edgeId }
     const visited = new Set();
     const steps = [];
 
     nodes.forEach(node => {
         distances[node.id] = Infinity;
+        previous[node.id] = null;
     });
-    distances[dijkstraStart] = 0;
+    distances[startId] = 0;
 
-    const unvisited = [...nodes.map(node => node.id)];
+    // Initial state step
+    steps.push({
+        type: 'initial',
+        distances: { ...distances },
+        currentNodeId: null,
+        relaxingEdgeId: null,
+        visitedOrder: [],
+    });
 
-    while (unvisited.length > 0) {
-        unvisited.sort((a, b) => distances[a] - distances[b]);
-        const closest = unvisited.shift();
+    const unvisited = new Set(nodes.map(n => n.id));
 
-        if (distances[closest] === Infinity) break;
+    while (unvisited.size > 0) {
+        // Find the unvisited node with the smallest distance
+        let closest = null;
+        for (const nodeId of unvisited) {
+            if (closest === null || distances[nodeId] < distances[closest]) {
+                closest = nodeId;
+            }
+        }
 
+        // If no reachable node is found, stop.
+        if (closest === null || distances[closest] === Infinity) break;
+
+        unvisited.delete(closest);
         visited.add(closest);
+
+        // Step: Select Node
         steps.push({
-            currentStep: closest,
-            visitedOrder: Array.from(visited),
-            distances: { ...distances }
+            type: 'select_node',
+            currentNodeId: closest,
+            relaxingEdgeId: null,
+            distances: { ...distances },
+            visitedOrder: [...visited],
         });
 
-        if (closest === dijkstraTarget) break;
+        if (closest === targetId) break;
 
         const neighbors = adjacencyList[closest] || [];
         for (const neighbor of neighbors) {
             if (!visited.has(neighbor.node)) {
                 const alt = distances[closest] + neighbor.weight;
+                
+                // Step: Relax Edge (before update)
+                steps.push({
+                    type: 'relax_edge',
+                    currentNodeId: closest,
+                    relaxingEdgeId: neighbor.edgeId,
+                    distances: { ...distances },
+                    visitedOrder: [...visited],
+                });
+                
                 if (alt < distances[neighbor.node]) {
                     distances[neighbor.node] = alt;
-                    previous[neighbor.node] = closest;
+                    previous[neighbor.node] = { nodeId: closest, edgeId: neighbor.edgeId };
                 }
             }
         }
     }
-
+    
+    // Path reconstruction
     const path = [];
-    const pathEdges = []; // NEW: Array to store edge IDs
-    let current = dijkstraTarget;
+    const pathEdges = [];
+    let current = targetId;
 
-    while (previous[current] !== undefined) {
-        const prevNode = previous[current];
-        path.unshift(current);
-
-        // Find the edge that connects prevNode and current
-        const edge = edges.find(e =>
-            (e.start === prevNode && e.end === current) ||
-            (graphType === 'undirected' && e.start === current && e.end === prevNode)
-        );
-        if (edge) {
-            pathEdges.unshift(edge.id); // Add edge ID to the path
+    if(distances[current] !== Infinity) {
+        while (current !== null) {
+            path.unshift(current);
+            const prev = previous[current];
+            if (prev) {
+                if (prev.edgeId) {
+                    pathEdges.unshift(prev.edgeId);
+                }
+                current = prev.nodeId;
+            } else {
+                break; // Reached the start node
+            }
         }
-        current = prevNode;
+    }
+    
+    if (path[0] !== startId) {
+        return { path: [], pathEdges: [], distances, visitedOrder: [...visited], steps };
     }
 
-    if (path.length > 0 || current === dijkstraStart) {
-        path.unshift(current);
-    }
-
-    if (path[0] !== dijkstraStart) {
-        return { path: [], pathEdges: [], distances, visitedOrder: Array.from(visited), steps };
-    }
-
-    return { path, pathEdges, distances, visitedOrder: Array.from(visited), steps };
+    return { path, pathEdges, distances, visitedOrder: [...visited], steps };
 };
 
 /* ==== A-Star ==== */
