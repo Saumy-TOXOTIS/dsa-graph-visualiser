@@ -202,7 +202,7 @@ const AlgorithmPanel = ({ nodes, graphType, isRunning, onRunAlgorithm }) => {
                 </motion.button>
             </motion.div>
 
-            {/* MST Algorithms */}
+            {/* Spanning Tress & All-Pairs */}
             <motion.div
                 className="mb-6"
                 initial={{ opacity: 0, y: 10 }}
@@ -259,7 +259,7 @@ const AlgorithmPanel = ({ nodes, graphType, isRunning, onRunAlgorithm }) => {
                         <div className={`absolute inset-0 bg-gradient-to-r from-cyan-500 to-teal-600 ${(nodes.length === 0 || isRunning) ? 'opacity-50' : ''}`} />
                         <span className="relative z-10 flex items-center justify-center gap-2">
                             <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5v4m0 0h-4m4 0l-5-5" />
                             </svg>
                             Run Floyd-Warshall
                         </span>
