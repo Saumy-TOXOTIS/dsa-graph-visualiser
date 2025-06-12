@@ -79,8 +79,7 @@ export const useAlgorithmRunner = (nodes, edges) => {
                     break;
                 }
                 case 'Kruskal': {
-                    const mstEdgeIds = step.mstEdges.map(e => e.id);
-                    setKruskalResult({ ...step, mstEdgeIds });
+                    setKruskalResult(prev => ({...prev, ...step, stepIndex: i}));
                     break;
                 }
                 case 'TopologicalSort': {
@@ -193,9 +192,10 @@ export const useAlgorithmRunner = (nodes, edges) => {
             }
             case 'Kruskal': {
                 const steps = algo.generateKruskalSteps(nodes, edges);
-                if (steps?.length > 0) {
+                if (steps?.length) {
                     stepsRef.current = steps;
-                    setKruskalResult({});
+                    // --- UPDATED: Initialize the state for Kruskal's ---
+                    setKruskalResult({ ...steps[0], stepIndex: -1 });
                     animate('Kruskal');
                 }
                 break;

@@ -561,70 +561,69 @@ export const generateKruskalSteps = (nodes, edges) => {
 
     const steps = [];
     const mstEdges = [];
-
-    // 1. Create a parent map for the DSU data structure. Initially, each node is its own parent.
+    
+    // --- DSU Data Structure ---
     const parent = {};
     nodes.forEach(node => parent[node.id] = node.id);
-
-    // The 'find' function for DSU: finds the representative (root) of a set.
-    // Includes path compression for optimization.
-    const find = (i) => {
-        if (parent[i] === i) {
-            return i;
-        }
-        return parent[i] = find(parent[i]);
-    };
-
-    // The 'union' function for DSU: merges two sets.
+    const find = (i) => (parent[i] === i ? i : (parent[i] = find(parent[i])));
     const union = (i, j) => {
         const rootI = find(i);
         const rootJ = find(j);
-        if (rootI !== rootJ) {
-            parent[rootI] = rootJ;
-            return true; // Union was successful
-        }
-        return false; // They were already in the same set
+        if (rootI !== rootJ) { parent[rootI] = rootJ; return true; }
+        return false;
+    };
+    // Helper to get the current components for visualization
+    const getDsuSets = () => {
+        const sets = new Map();
+        nodes.forEach(node => {
+            const root = find(node.id);
+            if (!sets.has(root)) sets.set(root, []);
+            sets.get(root).push(node.id);
+        });
+        return Array.from(sets.values());
     };
 
-    // 2. Sort all edges by weight in ascending order.
     const sortedEdges = [...edges].sort((a, b) => a.weight - b.weight);
 
     steps.push({
-        sortedEdges: sortedEdges.map(e => e.id), // Show the initial sorted order
-        currentEdgeId: null,
+        type: 'sort',
         mstEdges: [],
-        stepType: 'sort' // A special step type to explain the sorting
+        dsuSets: getDsuSets(),
+        currentEdgeId: null,
     });
 
-    // 3. Iterate through sorted edges.
     for (const edge of sortedEdges) {
-        const { start, end, id } = edge;
+        steps.push({
+            type: 'check_edge',
+            mstEdges: [...mstEdges],
+            dsuSets: getDsuSets(),
+            currentEdgeId: edge.id,
+        });
 
-        // Check if adding this edge forms a cycle by checking if start and end are already in the same set.
-        if (find(start) !== find(end)) {
-            // No cycle: add the edge to the MST.
-            union(start, end);
+        if (union(edge.start, edge.end)) {
             mstEdges.push(edge);
-
-            // Step: Edge Accepted
             steps.push({
-                sortedEdges: sortedEdges.map(e => e.id),
-                currentEdgeId: id,
+                type: 'accept_edge',
                 mstEdges: [...mstEdges],
-                stepType: 'accept'
+                dsuSets: getDsuSets(), // Get sets *after* union
+                currentEdgeId: edge.id,
             });
         } else {
-            // Cycle detected: discard the edge.
-
-            // Step: Edge Rejected
             steps.push({
-                sortedEdges: sortedEdges.map(e => e.id),
-                currentEdgeId: id,
+                type: 'reject_edge',
                 mstEdges: [...mstEdges],
-                stepType: 'reject'
+                dsuSets: getDsuSets(),
+                currentEdgeId: edge.id,
             });
         }
     }
+    
+    steps.push({
+        type: 'done',
+        mstEdges: [...mstEdges],
+        dsuSets: getDsuSets(),
+        currentEdgeId: null,
+    });
 
     return steps;
 };
