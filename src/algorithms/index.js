@@ -471,49 +471,84 @@ export const generateBellmanFordSteps = (nodes, edges, graphType, startNodeId) =
 export const generatePrimSteps = (nodes, edges, graphType) => {
     if (nodes.length === 0) return [];
 
-    const startId = nodes[0].id;
     const adjacencyList = buildAdjacencyList(nodes, edges, graphType);
-    const visited = new Set([startId]);
+    const mstNodes = new Set();
     const mstEdges = [];
     const steps = [];
 
-    // Initial step
+    // Start with the first node arbitrarily
+    const startNodeId = nodes[0].id;
+    mstNodes.add(startNodeId);
+
     steps.push({
-        currentStep: startId,
-        visitedSoFar: [...visited],
-        mstEdges: [],
+        type: 'start',
+        mstNodes: new Set(mstNodes),
+        mstEdges: [...mstEdges],
+        fringeEdgeIds: [],
+        cheapestEdgeId: null,
+        currentNodeId: startNodeId,
     });
 
-    while (visited.size < nodes.length) {
-        let minEdge = null;
+    while (mstNodes.size < nodes.length) {
+        const fringe = [];
+        let cheapestEdge = null;
 
-        for (const nodeId of visited) {
+        // Find all edges on the fringe
+        for (const nodeId of mstNodes) {
             const neighbors = adjacencyList[nodeId] || [];
             for (const neighbor of neighbors) {
-                if (!visited.has(neighbor.node)) {
-                    if (!minEdge || neighbor.weight < minEdge.weight) {
-                        minEdge = {
+                if (!mstNodes.has(neighbor.node)) {
+                    fringe.push(neighbor.edgeId);
+                    if (cheapestEdge === null || neighbor.weight < cheapestEdge.weight) {
+                        cheapestEdge = {
                             from: nodeId,
                             to: neighbor.node,
-                            weight: neighbor.weight
+                            weight: neighbor.weight,
+                            id: neighbor.edgeId,
                         };
                     }
                 }
             }
         }
-
-        if (minEdge) {
-            visited.add(minEdge.to);
-            mstEdges.push(minEdge);
+        
+        // Step to show all considered fringe edges
+        if (fringe.length > 0) {
             steps.push({
-                currentStep: minEdge.to,
-                visitedSoFar: [...visited],
+                type: 'consider_fringe',
+                mstNodes: new Set(mstNodes),
                 mstEdges: [...mstEdges],
+                fringeEdgeIds: fringe,
+                cheapestEdgeId: null,
+                currentNodeId: null,
             });
-        } else {
-            // No more reachable nodes, break to prevent infinite loop on disconnected graphs
-            break;
         }
+        
+        // If no cheapest edge is found, graph is disconnected. Stop.
+        if (cheapestEdge === null) break;
+
+        // Step to highlight the chosen cheapest edge
+        steps.push({
+            type: 'select_edge',
+            mstNodes: new Set(mstNodes),
+            mstEdges: [...mstEdges],
+            fringeEdgeIds: fringe,
+            cheapestEdgeId: cheapestEdge.id,
+            currentNodeId: null,
+        });
+
+        // Add the new node and edge to the MST
+        mstNodes.add(cheapestEdge.to);
+        mstEdges.push(cheapestEdge);
+
+        // Step to commit the new node and edge to the MST
+        steps.push({
+            type: 'add_to_mst',
+            mstNodes: new Set(mstNodes),
+            mstEdges: [...mstEdges],
+            fringeEdgeIds: [],
+            cheapestEdgeId: null,
+            currentNodeId: cheapestEdge.to,
+        });
     }
 
     return steps;

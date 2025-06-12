@@ -75,14 +75,7 @@ export const useAlgorithmRunner = (nodes, edges) => {
                     break;
                 }
                 case 'Prim': {
-                    const mstEdgeIds = step.mstEdges.map(e => {
-                        const originalEdge = edgesRef.current.find(edge =>
-                            (edge.start === e.from && edge.end === e.to) ||
-                            (edge.start === e.to && edge.end === e.from)
-                        );
-                        return originalEdge?.id;
-                    }).filter(Boolean);
-                    setPrimResult(prev => ({ ...prev, mstNodes: step.visitedSoFar, mstEdges: step.mstEdges, mstEdgeIds: mstEdgeIds, currentStep: step.currentStep, stepIndex: i }));
+                    setPrimResult(prev => ({...prev, ...step, stepIndex: i }));
                     break;
                 }
                 case 'Kruskal': {
@@ -189,10 +182,11 @@ export const useAlgorithmRunner = (nodes, edges) => {
                 break;
             }
             case 'Prim': {
-                const steps = algo.generatePrimSteps(nodes, edges, graphType);
-                if (steps?.length > 0) {
-                    stepsRef.current = steps;
-                    setPrimResult({ mstNodes: [], mstEdges: [], mstEdgeIds: [], currentStep: null, stepIndex: -1 });
+                const result = { steps: algo.generatePrimSteps(nodes, edges, graphType) };
+                if (result.steps?.length) {
+                    stepsRef.current = result.steps;
+                    // --- UPDATED: Initialize the state for Prim's ---
+                    setPrimResult({ ...result.steps[0], stepIndex: -1 });
                     animate('Prim');
                 }
                 break;
