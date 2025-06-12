@@ -9,51 +9,115 @@ export const generateBfsSteps = (nodes, edges, graphType, startNode) => {
 
     const adjacencyList = buildAdjacencyList(nodes, edges, graphType);
     const visited = new Set([startNode]);
-    const queue = [startNode];
+    const queue = [{ nodeId: startNode, sourceNode: null, edgeId: null }];
     const visitedOrder = [startNode];
-    const steps = [{ currentStep: startNode, visitedOrder: [...visitedOrder] }];
+    const steps = [];
+
+    // Initial state: Show the start node as current
+    steps.push({
+        currentStep: startNode,
+        sourceNode: null,
+        edgeId: null,
+        visitedOrder: [...visitedOrder],
+        exploringEdgeIds: [],
+    });
 
     while (queue.length > 0) {
-        const current = queue.shift();
-        const neighbors = adjacencyList[current] || [];
+        const { nodeId, sourceNode } = queue.shift();
+        const neighbors = adjacencyList[nodeId] || [];
+        
+        // --- NEW: Exploring Phase ---
+        // Get edges to unvisited neighbors for the "scan" effect
+        const exploringEdges = neighbors
+            .filter(neighbor => !visited.has(neighbor.node))
+            .map(neighbor => neighbor.edgeId);
+
+        if (exploringEdges.length > 0) {
+            steps.push({
+                currentStep: nodeId,
+                sourceNode: sourceNode,
+                edgeId: null, // No single edge is being traversed yet
+                visitedOrder: [...visitedOrder],
+                exploringEdgeIds: exploringEdges, // Highlight edges being considered
+            });
+        }
+        
+        // --- NEW: Traversing Phase (for each neighbor) ---
         for (const neighbor of neighbors) {
             if (!visited.has(neighbor.node)) {
                 visited.add(neighbor.node);
                 visitedOrder.push(neighbor.node);
-                queue.push(neighbor.node);
-                steps.push({ currentStep: neighbor.node, visitedOrder: [...visitedOrder] });
+                queue.push({ nodeId: neighbor.node, sourceNode: nodeId, edgeId: neighbor.edgeId });
+
+                // Create a step for the actual traversal
+                steps.push({
+                    currentStep: neighbor.node, // The new node is now current
+                    sourceNode: nodeId,        // The node we came from
+                    edgeId: neighbor.edgeId,   // The edge we used
+                    visitedOrder: [...visitedOrder],
+                    exploringEdgeIds: [], // Clear exploring edges
+                });
             }
         }
     }
     return steps;
 };
 
+
 /* ==== DFS ==== */
 
+// --- UPDATED: Complete rewrite of DFS to be more descriptive ---
 export const generateDfsSteps = (nodes, edges, graphType, startNode) => {
     if (!startNode || nodes.length === 0) return [];
 
     const adjacencyList = buildAdjacencyList(nodes, edges, graphType);
     const visited = new Set();
-    const visitedOrder = [];
     const steps = [];
+    const pathStack = []; // Simulates the recursion call stack
+    const visitedEdges = new Set();
 
-    const dfs = (node) => {
-        visited.add(node);
-        visitedOrder.push(node);
-        steps.push({ currentStep: node, visitedOrder: [...visitedOrder] });
+    const dfs = (nodeId, parentNode, edgeId) => {
+        visited.add(nodeId);
+        pathStack.push(nodeId);
+        if (edgeId) visitedEdges.add(edgeId);
 
-        const neighbors = adjacencyList[node] || [];
+        // "Go Deeper" Step
+        steps.push({
+            type: 'go_deeper',
+            currentNode: nodeId,
+            currentEdgeId: edgeId,
+            pathStack: [...pathStack],
+            visitedNodes: [...visited],
+            visitedEdgeIds: [...visitedEdges],
+            backtrackingNode: null,
+        });
+
+        const neighbors = adjacencyList[nodeId] || [];
         for (const neighbor of neighbors) {
             if (!visited.has(neighbor.node)) {
-                dfs(neighbor.node);
+                // Before going deeper, we might want a step to show we are 'considering'
+                dfs(neighbor.node, nodeId, neighbor.edgeId);
             }
         }
+
+        pathStack.pop();
+
+        // "Backtrack" Step
+        steps.push({
+            type: 'backtrack',
+            currentNode: parentNode, // The node we are returning to
+            currentEdgeId: null,
+            pathStack: [...pathStack],
+            visitedNodes: [...visited],
+            visitedEdgeIds: [...visitedEdges],
+            backtrackingNode: nodeId, // The node we are leaving
+        });
     };
 
-    dfs(startNode);
+    dfs(startNode, null, null);
     return steps;
 };
+
 
 /* ==== Dijkstra ==== */
 

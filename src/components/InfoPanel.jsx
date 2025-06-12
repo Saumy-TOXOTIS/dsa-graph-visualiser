@@ -5,17 +5,19 @@ import { ChartBarIcon, ClipboardDocumentListIcon, ArrowsRightLeftIcon } from '@h
 
 const ResultItem = ({ node, type }) => {
     const nodeValue = node?.value || 'N/A';
+    // --- UPDATED: Add pathStack color for DFS ---
     const colors = {
         default: 'bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200',
         start: 'bg-gradient-to-r from-green-500 to-emerald-500 text-white',
         target: 'bg-gradient-to-r from-red-500 to-pink-500 text-white',
         path: 'bg-gradient-to-r from-amber-500 to-orange-500 text-white',
-        visited: 'bg-gradient-to-r from-emerald-500 to-teal-500 text-white',
+        pathStack: 'bg-gradient-to-r from-green-500 to-teal-500 text-white', // For DFS stack
+        visited: 'bg-gradient-to-r from-blue-500 to-sky-500 text-white',
         current: 'bg-gradient-to-r from-pink-500 to-rose-500 text-white',
     };
     return (
         <motion.span 
-            className={`px-3 py-1.5 rounded-full text-sm font-medium shadow-sm ${colors[type]}`}
+            className={`px-3 py-1.5 rounded-full text-sm font-medium shadow-sm ${colors[type] || colors.default}`}
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
         >
@@ -25,9 +27,13 @@ const ResultItem = ({ node, type }) => {
 }
 
 const InfoPanel = ({ nodes, edges, graphType, algoResults }) => {
-    const { traversalResult, dijkstraResult, primResult, aStarResult, topoSortResult, bellmanFordResult, kruskalResult } = algoResults;
+    // --- UPDATED: Get currentAlgorithm to differentiate rendering ---
+    const { currentAlgorithm, traversalResult, dijkstraResult, primResult, aStarResult, topoSortResult, bellmanFordResult, kruskalResult } = algoResults;
 
     const findNode = (id) => nodes.find(n => n.id === id);
+    
+    // --- UPDATED: Logic to decide which array to map over ---
+    const traversalDisplayOrder = traversalResult?.visitedNodes || traversalResult?.visitedOrder;
 
     return (
         <div className="w-full lg:w-3/4 mt-6 grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -140,7 +146,8 @@ const InfoPanel = ({ nodes, edges, graphType, algoResults }) => {
                 </div>
 
                 <div className="space-y-6 text-sm text-gray-700 dark:text-gray-300">
-                    {traversalResult && (
+                    {/* --- UPDATED: Main fix is here --- */}
+                    {traversalResult && traversalDisplayOrder && (
                         <motion.div
                             initial={{ opacity: 0, y: 10 }}
                             animate={{ opacity: 1, y: 0 }}
@@ -150,20 +157,33 @@ const InfoPanel = ({ nodes, edges, graphType, algoResults }) => {
                                 <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
                                 </svg>
-                                Traversal Order
+                                Traversal Order ({currentAlgorithm})
                             </h3>
                             <div className="flex flex-wrap gap-2">
-                                {traversalResult.visitedOrder.map((id, idx) => (
-                                    <ResultItem 
-                                        key={idx} 
-                                        node={findNode(id)} 
-                                        type={traversalResult.stepIndex >= idx ? 
-                                            (traversalResult.currentStep === id ? 'current' : 'visited') : 'default'} 
-                                    />
-                                ))}
+                                {traversalDisplayOrder.map((id, idx) => {
+                                    let type = 'default';
+                                    if (currentAlgorithm === 'BFS') {
+                                        type = traversalResult.stepIndex >= idx ? 
+                                            (traversalResult.currentStep === id ? 'current' : 'visited') : 'default';
+                                    } else if (currentAlgorithm === 'DFS') {
+                                        // For DFS, we color based on the final state shown in the panel
+                                        type = 'visited';
+                                        if (traversalResult.pathStack?.includes(id)) type = 'pathStack';
+                                        if (traversalResult.currentNode === id) type = 'current';
+                                    }
+
+                                    return (
+                                        <ResultItem 
+                                            key={idx} 
+                                            node={findNode(id)} 
+                                            type={type} 
+                                        />
+                                    );
+                                })}
                             </div>
                         </motion.div>
                     )}
+
 
                     {dijkstraResult && (
                         <motion.div
@@ -229,10 +249,9 @@ const InfoPanel = ({ nodes, edges, graphType, algoResults }) => {
                         </div>
                     )}
 
-                    {/* Kruskal's MST Results */}
                     {kruskalResult && kruskalResult.mstEdges && (
                         <div>
-                            <h3 className="font-semibold text-md mb-2 text-purple-600 dark:text-purple-400">Prim's MST</h3>
+                            <h3 className="font-semibold text-md mb-2 text-purple-600 dark:text-purple-400">Kruskal's MST</h3>
                             <p className="font-medium mb-2">Total Weight: <span className="font-bold">{kruskalResult.mstEdges.reduce((acc, edge) => acc + edge.weight, 0).toFixed(1)}</span></p>
                             <div className="mt-1 space-y-1">
                                 {kruskalResult.mstEdges.map((edge, idx) => (
@@ -244,7 +263,6 @@ const InfoPanel = ({ nodes, edges, graphType, algoResults }) => {
                         </div>
                     )}
                     
-                    {/* Bellman-Ford Results */}
                     {bellmanFordResult && (
                         <div>
                             <h3 className="font-semibold text-md mb-2 text-orange-600 dark:text-orange-400">Bellman-Ford Result</h3>
@@ -267,7 +285,6 @@ const InfoPanel = ({ nodes, edges, graphType, algoResults }) => {
                         </div>
                     )}
 
-                    {/* Topological Sort Results */}
                     {topoSortResult && (
                         <div>
                             <h3 className="font-semibold text-md mb-2 text-sky-600 dark:text-sky-400">Topological Sort Result</h3>

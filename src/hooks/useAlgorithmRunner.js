@@ -54,10 +54,18 @@ export const useAlgorithmRunner = (nodes, edges) => {
             
             switch (algorithm) {
                 case 'BFS':
-                    setTraversalResult(prev => ({ ...prev, currentStep: step.currentStep, stepIndex: i }));
+                    setTraversalResult(prev => ({
+                        ...prev,
+                        currentStep: step.currentStep,
+                        sourceNode: step.sourceNode,
+                        currentEdgeId: step.edgeId,
+                        exploringEdgeIds: step.exploringEdgeIds,
+                        stepIndex: i
+                    }));
                     break;
                 case 'DFS':
-                    setTraversalResult(prev => ({ ...prev, currentStep: step.currentStep, stepIndex: i }));
+                     // --- UPDATED: Pass the entire new DFS step object ---
+                    setTraversalResult(prev => ({ ...prev, ...step, stepIndex: i }));
                     break;
                 case 'Dijkstra':
                     setDijkstraResult(prev => ({ ...prev, currentStep: step.currentStep, visitedOrder: step.visitedOrder, stepIndex: i }));
@@ -109,7 +117,15 @@ export const useAlgorithmRunner = (nodes, edges) => {
                 const steps = algo.generateBfsSteps(nodes, edges, graphType, startNode);
                 if (steps?.length > 0) {
                     stepsRef.current = steps;
-                    setTraversalResult({ visitedOrder: steps.map(s => s.currentStep), currentStep: null, stepIndex: -1 });
+                    setTraversalResult({
+                        steps: steps,
+                        visitedOrder: steps.map(s => s.currentStep).filter((v, i, a) => a.indexOf(v) === i),
+                        currentStep: null,
+                        sourceNode: null,
+                        currentEdgeId: null,
+                        exploringEdgeIds: [],
+                        stepIndex: -1
+                    });
                     animate('BFS');
                 }
                 break;
@@ -118,7 +134,17 @@ export const useAlgorithmRunner = (nodes, edges) => {
                 const steps = algo.generateDfsSteps(nodes, edges, graphType, startNode);
                 if (steps?.length > 0) {
                     stepsRef.current = steps;
-                    setTraversalResult({ visitedOrder: steps.map(s => s.currentStep), currentStep: null, stepIndex: -1 });
+                    // --- UPDATED: Initialize the state for DFS ---
+                    setTraversalResult({
+                        steps: steps,
+                        visitedNodes: [],
+                        visitedEdgeIds: [],
+                        pathStack: [],
+                        currentNode: null,
+                        currentEdgeId: null,
+                        backtrackingNode: null,
+                        stepIndex: -1,
+                    });
                     animate('DFS');
                 }
                 break;
@@ -175,7 +201,7 @@ export const useAlgorithmRunner = (nodes, edges) => {
                     setBellmanFordResult(result.steps[0]); // Set initial state from the first step
                     animate('BellmanFord');
                 } else {
-                    console.error("Bellman-Ford did not generate any steps.");
+                    console.error("Bellman-Ford did not run. Ensure a start node is selected.");
                     alert("Could not run Bellman-Ford. Ensure a start node is selected.");
                 }
                 break;

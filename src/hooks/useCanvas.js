@@ -39,9 +39,14 @@ const getNodeStyle = (node, isHovered, algorithmResults, edges) => {
     let shouldPulse = false;
 
     if (currentAlgorithm) {
-        // --- Highest Priority: Being the "Current" Node ---
+        // --- UPDATED: Add logic for new DFS states ---
+        const isDFS = currentAlgorithm === 'DFS';
+        const isBFS = currentAlgorithm === 'BFS';
+
+        // Highest Priority: Being the "Current" Node
         if (
-            (traversalResult?.currentStep === node.id) ||
+            (isBFS && traversalResult?.currentStep === node.id) ||
+            (isDFS && traversalResult?.currentNode === node.id) ||
             (dijkstraResult?.currentStep === node.id) ||
             (primResult?.currentStep === node.id) ||
             (aStarResult?.current === node.id) ||
@@ -52,7 +57,14 @@ const getNodeStyle = (node, isHovered, algorithmResults, edges) => {
             state = 'current';
             shouldPulse = true;
         }
-        // --- Next Priority: Being part of a final Path or Cycle ---
+        // Next Priority: Being on the DFS path stack or BFS source
+        else if (isDFS && traversalResult?.pathStack?.includes(node.id)) {
+            state = 'pathStack';
+        }
+        else if (isBFS && traversalResult?.sourceNode === node.id) {
+            state = 'source';
+        }
+        // Next Priority: Being part of a final Path or Cycle
         else if (
             (dijkstraResult?.path.includes(node.id)) ||
             (aStarResult?.path.includes(node.id)) ||
@@ -61,22 +73,23 @@ const getNodeStyle = (node, isHovered, algorithmResults, edges) => {
         ) {
             state = 'path';
         }
-        // --- Next Priority: Being a Start or Target Node ---
+        // Next Priority: Being a Start or Target Node
         else if (dijkstraResult?.path[0] === node.id || aStarResult?.start === node.id) {
             state = 'start';
         } else if (dijkstraResult?.path[dijkstraResult.path.length - 1] === node.id || aStarResult?.target === node.id) {
             state = 'target';
         }
-        // --- Next Priority: Being part of an MST ---
+        // Next Priority: Being part of an MST
         else if (
             (primResult?.mstNodes.includes(node.id)) ||
             (kruskalResult?.mstEdgeIds ? edges.filter(e => kruskalResult.mstEdgeIds.includes(e.id)).flatMap(e => [e.start, e.end]).includes(node.id) : false)
         ) {
             state = 'mst';
         }
-        // --- Lowest Priority: Being "Visited" ---
+        // Lowest Priority: Being "Visited"
         else if (
-            (traversalResult?.visitedOrder.includes(node.id)) ||
+            (isBFS && traversalResult?.visitedOrder.includes(node.id)) ||
+            (isDFS && traversalResult?.visitedNodes.includes(node.id)) ||
             (dijkstraResult?.visitedOrder.includes(node.id)) ||
             (aStarResult?.visitedOrder.includes(node.id)) ||
             (topoSortResult?.sortedOrder?.includes(node.id))
@@ -89,7 +102,6 @@ const getNodeStyle = (node, isHovered, algorithmResults, edges) => {
         state = 'target'; // Use red for cycle nodes
     }
 
-    // Hover state overrides everything except pulsing
     if (isHovered) {
         state = 'hover';
     }
@@ -98,13 +110,36 @@ const getNodeStyle = (node, isHovered, algorithmResults, edges) => {
 };
 
 // This function determines the style of an EDGE
-const getEdgeStyle = (edge, isHovered, algorithmResults, graphType, cycleResult) => {
-    const { dijkstraResult, primResult, kruskalResult, aStarResult, bellmanFordResult } = algorithmResults;
+const getEdgeStyle = (edge, isHovered, algorithmResults, graphType) => {
+    const { traversalResult, dijkstraResult, primResult, kruskalResult, aStarResult, bellmanFordResult, cycleResult } = algorithmResults;
+    const { currentAlgorithm } = algorithmResults;
     
     let state = 'default';
     let isRejected = false;
 
-    if (kruskalResult?.currentEdgeId === edge.id && kruskalResult.stepType === 'reject') {
+    // --- UPDATED: Handle both BFS and DFS traversal results ---
+    if (currentAlgorithm === 'BFS' && traversalResult) {
+        if (traversalResult.exploringEdgeIds?.includes(edge.id)) {
+            state = 'exploring';
+        } else if (traversalResult.currentEdgeId === edge.id) {
+            state = 'current';
+        } else if (traversalResult.steps) {
+            const isVisitedEdge = traversalResult.steps
+                .slice(0, traversalResult.stepIndex + 1)
+                .some(step => step.edgeId === edge.id);
+            if (isVisitedEdge) {
+                state = 'visited';
+            }
+        }
+    } else if (currentAlgorithm === 'DFS' && traversalResult) {
+        if (traversalResult.currentEdgeId === edge.id) {
+            state = 'current';
+        } else if (traversalResult.visitedEdgeIds?.includes(edge.id)) {
+            state = 'visited';
+        }
+    }
+    // Existing logic for other algorithms
+    else if (kruskalResult?.currentEdgeId === edge.id && kruskalResult.stepType === 'reject') {
         isRejected = true;
     } else if (
         (dijkstraResult?.pathEdges.includes(edge.id)) ||
@@ -177,11 +212,23 @@ export const useCanvas = (
         gradient.addColorStop(1, theme === 'light' ? '#dbeafe' : '#0f172a');
         ctx.fillStyle = gradient;
         ctx.fillRect(0, 0, canvas.width, canvas.height);
-        const { traversalResult, dijkstraResult, primResult, kruskalResult, aStarResult, topoSortResult, bellmanFordResult, cycleResult, componentsResult, currentAlgorithm } = algorithmResults;
+        
+        // --- UPDATED: New colors for new states ---
         const colors = {
+            // Node colors
             default: '#3B82F6', hover: '#F59E0B', visited: '#60A5FA', current: '#EC4899',
+            source: '#10B981',      // Green for BFS source node
+            pathStack: '#10B981',   // Green for DFS path stack
             path: '#10B981', mst: '#8B5CF6', start: '#10B981', target: '#EF4444',
-            edgeDefault: theme === 'light' ? '#4B5563' : '#D1D5DB', edgeRejected: '#ef4444'
+            
+            // Edge colors
+            edgeDefault: theme === 'light' ? '#4B5563' : '#D1D5DB',
+            edgeHover: '#F59E0B',
+            edgeVisited: '#60A5FA',
+            edgeCurrent: '#EC4899',
+            edgePath: '#10B981',
+            edgeExploring: '#FBBF24',
+            edgeRejected: '#ef4444'
         };
         
         edges.forEach((edge) => {
@@ -190,17 +237,26 @@ export const useCanvas = (
             if (!startNode || !endNode) return;
             const isHovered = hoveredElement?.type === 'edge' && hoveredElement.id === edge.id;
             
-            const style = getEdgeStyle(edge, isHovered, algorithmResults, graphType, algorithmResults.cycleResult);
+            const style = getEdgeStyle(edge, isHovered, algorithmResults, graphType);
 
             ctx.beginPath();
             ctx.moveTo(startNode.x, startNode.y);
             ctx.lineTo(endNode.x, endNode.y);
 
-            ctx.strokeStyle = style.isRejected ? colors.edgeRejected : (colors[style.state] || colors.edgeDefault);
-            ctx.lineWidth = (style.state === 'path' || style.state === 'current' || style.state === 'hover') ? 4 : (style.isRejected ? 2 : 2);
+            let edgeColor = colors.edgeDefault;
+            if (style.isRejected) edgeColor = colors.edgeRejected;
+            else if (style.state === 'hover') edgeColor = colors.edgeHover;
+            else if (style.state === 'exploring') edgeColor = colors.edgeExploring;
+            else if (style.state === 'current') edgeColor = colors.edgeCurrent;
+            else if (style.state === 'visited') edgeColor = colors.edgeVisited;
+            else if (style.state === 'path') edgeColor = colors.edgePath;
+
+            ctx.strokeStyle = edgeColor;
+            ctx.lineWidth = (style.state === 'current' || style.state === 'exploring' || style.state === 'hover' || style.state === 'path') ? 4 : 2.5;
             ctx.setLineDash(style.isRejected ? [5, 5] : []);
             ctx.stroke();
             ctx.setLineDash([]);
+            
             ctx.fillStyle = isHovered ? '#f59e0b' : (theme === "light" ? '#1F2937' : '#D1D5DB');
             ctx.font = 'bold 14px sans-serif';
             ctx.textAlign = 'center';
@@ -232,7 +288,6 @@ export const useCanvas = (
 
             let nodeColor = colors[style.state] || colors.default;
 
-            // Handle component coloring override
             if(algorithmResults.componentsResult) {
                 const componentIndex = algorithmResults.componentsResult.components.findIndex(comp => comp.includes(node.id));
                 if (componentIndex !== -1) {
@@ -240,10 +295,8 @@ export const useCanvas = (
                 }
             }
 
-            // Create gradient from the final color
             const nodeGradient = ctx.createRadialGradient(node.x, node.y, 5, node.x, node.y, radius);
             nodeGradient.addColorStop(0, nodeColor);
-            // We now use our own darkenColor function instead of the undefined tinycolor
             nodeGradient.addColorStop(1, darkenColor(nodeColor, 15));
             
             ctx.fillStyle = nodeGradient;
@@ -279,17 +332,14 @@ export const useCanvas = (
             if (hoveredNode && degrees) {
                 const posX = hoveredNode.x;
                 const posY = hoveredNode.y - 45;
-
                 ctx.font = 'bold 12px sans-serif';
                 ctx.textAlign = 'center';
                 ctx.textBaseline = 'bottom';
-
                 const boxPadding = 8;
                 let textToDisplay = graphType === 'directed' ? `In: ${degrees.in} | Out: ${degrees.out}` : `Degree: ${degrees.degree}`;
                 const textWidth = ctx.measureText(textToDisplay).width;
                 const boxWidth = textWidth + boxPadding * 2;
                 const boxHeight = 12 + boxPadding * 2;
-
                 ctx.fillStyle = theme === 'light' ? 'rgba(255, 255, 255, 0.9)' : 'rgba(30, 41, 59, 0.9)';
                 ctx.strokeStyle = theme === 'light' ? '#a5b4fc' : '#4f46e5';
                 ctx.lineWidth = 1.5;
@@ -297,7 +347,6 @@ export const useCanvas = (
                 ctx.roundRect(posX - boxWidth / 2, posY - boxHeight, boxWidth, boxHeight, [8]);
                 ctx.fill();
                 ctx.stroke();
-
                 ctx.fillStyle = theme === 'light' ? '#1e293b' : '#e0e7ff';
                 ctx.fillText(textToDisplay, posX, posY - boxPadding);
             }
@@ -320,24 +369,17 @@ export const useCanvas = (
 
     useEffect(() => {
         let resizeTimer;
-
         const handleResize = () => {
-            // Clear the previous timer to reset the debounce period
             clearTimeout(resizeTimer);
-            // Set a new timer
             resizeTimer = setTimeout(() => {
-                console.log("Debounced resize: Redrawing graph...");
                 drawGraph();
-            }, 100); // Wait 100ms after the user stops resizing
+            }, 100); 
         };
-
         window.addEventListener('resize', handleResize);
-        // Initial draw to set the correct size
         drawGraph();
-
         return () => {
             window.removeEventListener('resize', handleResize);
-            clearTimeout(resizeTimer); // Clean up the timer on unmount
+            clearTimeout(resizeTimer);
         };
     }, [drawGraph]);
 
@@ -365,7 +407,6 @@ export const useCanvas = (
         setDraggingId(null);
     };
 
-    // Export everything needed by the parent component
     return {
         canvasRef, containerRef, contextMenu, setContextMenu, closeContextMenu: () => setContextMenu(prev => ({ ...prev, visible: false })),
         isDrawingEdge, setIsDrawingEdge, hoveredElement, setHoveredElement,

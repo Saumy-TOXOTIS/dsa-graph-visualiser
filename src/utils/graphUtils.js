@@ -12,10 +12,12 @@ export const buildAdjacencyList = (nodes, edges, graphType) => {
     nodes.forEach((node) => (adj[node.id] = []));
     edges.forEach((edge) => {
         if (adj[edge.start]) {
-            adj[edge.start].push({ node: edge.end, weight: edge.weight });
+            // FIX: Add edge.id so algorithms can track it
+            adj[edge.start].push({ node: edge.end, weight: edge.weight, edgeId: edge.id });
         }
         if (graphType === 'undirected' && adj[edge.end]) {
-            adj[edge.end].push({ node: edge.start, weight: edge.weight });
+            // FIX: Add edge.id so algorithms can track it
+            adj[edge.end].push({ node: edge.start, weight: edge.weight, edgeId: edge.id });
         }
     });
     return adj;
