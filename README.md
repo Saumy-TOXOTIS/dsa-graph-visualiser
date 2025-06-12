@@ -39,7 +39,7 @@ The DSA Graph Visualizer is more than just a tool; it's a comprehensive learning
 
 -   **Rich Algorithm Suite (10 Visualizations):**
     -   **Traversal:** BFS, DFS
-    -   **Shortest Path:** Dijkstra's, A*, Bellman-Ford (with negative weight handling)
+    -   **Shortest Path:** Dijkstra's, A*, Bellman-Ford (with negative weight handling), Floyd Warshall
     -   **Minimum Spanning Tree:** Prim's, Kruskal's
     -   **Analysis & Ordering:** Topological Sort, Cycle Detection, and Connectivity Analysis (including SCCs).
 
