@@ -21,11 +21,12 @@ const AlgorithmPanel = ({ nodes, graphType, isRunning, onRunAlgorithm }) => {
     const handleRunAStar = () => { if (startNode && targetNode) onRunAlgorithm('AStar', { dijkstraStart: parseInt(startNode), dijkstraTarget: parseInt(targetNode), heuristicType }); };
     const handleRunPrim = () => onRunAlgorithm('Prim', {});
     const handleRunKruskal = () => onRunAlgorithm('Kruskal', {});
+    const handleRunFloydWarshall = () => onRunAlgorithm('FloydWarshall', {});
     const handleRunTopoSort = () => onRunAlgorithm('TopologicalSort', {});
     const handleRunBellmanFord = () => { if (startNode) onRunAlgorithm('BellmanFord', { startNode: parseInt(startNode) }); };
 
     const buttonVariants = {
-        hover: { 
+        hover: {
             y: -2,
             boxShadow: "0 10px 15px -3px rgba(0, 0, 0, 0.1)"
         },
@@ -33,7 +34,7 @@ const AlgorithmPanel = ({ nodes, graphType, isRunning, onRunAlgorithm }) => {
     };
 
     return (
-        <motion.div 
+        <motion.div
             className="p-6 rounded-2xl bg-gradient-to-br from-white/80 to-white/90 dark:from-gray-800/80 dark:to-gray-800/90 backdrop-blur-sm border border-gray-200 dark:border-gray-700 shadow-xl"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -51,7 +52,7 @@ const AlgorithmPanel = ({ nodes, graphType, isRunning, onRunAlgorithm }) => {
             </div>
 
             {/* Traversal: BFS/DFS */}
-            <motion.div 
+            <motion.div
                 className="mb-6 pb-6 border-b border-gray-200 dark:border-gray-700"
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -65,9 +66,9 @@ const AlgorithmPanel = ({ nodes, graphType, isRunning, onRunAlgorithm }) => {
                         option2="DFS"
                     />
                 </div>
-                <motion.select 
-                    value={startNode} 
-                    onChange={(e) => setStartNode(e.target.value)} 
+                <motion.select
+                    value={startNode}
+                    onChange={(e) => setStartNode(e.target.value)}
                     className={`${selectClasses} mb-4 cursor-pointer`}
                     whileFocus={{ scale: 1.02 }}
                 >
@@ -104,7 +105,7 @@ const AlgorithmPanel = ({ nodes, graphType, isRunning, onRunAlgorithm }) => {
             </motion.div>
 
             {/* Pathfinding: Dijkstra/A* */}
-            <motion.div 
+            <motion.div
                 className="mb-6 pb-6 border-b border-gray-200 dark:border-gray-700"
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -117,18 +118,18 @@ const AlgorithmPanel = ({ nodes, graphType, isRunning, onRunAlgorithm }) => {
                     Pathfinding
                 </h3>
                 <div className="grid grid-cols-2 gap-3 mb-3">
-                    <motion.select 
-                        value={startNode} 
-                        onChange={(e) => setStartNode(e.target.value)} 
+                    <motion.select
+                        value={startNode}
+                        onChange={(e) => setStartNode(e.target.value)}
                         className={`${selectClasses} cursor-pointer`}
                         whileFocus={{ scale: 1.02 }}
                     >
                         <option value="">From</option>
                         {nodes.map((node) => <option key={node.id} value={node.id}>{node.value}</option>)}
                     </motion.select>
-                    <motion.select 
-                        value={targetNode} 
-                        onChange={(e) => setTargetNode(e.target.value)} 
+                    <motion.select
+                        value={targetNode}
+                        onChange={(e) => setTargetNode(e.target.value)}
                         className={`${selectClasses} cursor-pointer`}
                         whileFocus={{ scale: 1.02 }}
                     >
@@ -136,7 +137,7 @@ const AlgorithmPanel = ({ nodes, graphType, isRunning, onRunAlgorithm }) => {
                         {nodes.map((node) => <option key={node.id} value={node.id}>{node.value}</option>)}
                     </motion.select>
                 </div>
-                
+
                 {/* Dijkstra */}
                 <motion.button
                     onClick={handleRunDijkstra}
@@ -154,7 +155,7 @@ const AlgorithmPanel = ({ nodes, graphType, isRunning, onRunAlgorithm }) => {
                         Run Dijkstra
                     </span>
                 </motion.button>
-                
+
                 {/* Bellman-Ford */}
                 <motion.button
                     onClick={handleRunBellmanFord}
@@ -172,11 +173,11 @@ const AlgorithmPanel = ({ nodes, graphType, isRunning, onRunAlgorithm }) => {
                         Run Bellman-Ford
                     </span>
                 </motion.button>
-                
+
                 {/* A* */}
-                <motion.select 
-                    value={heuristicType} 
-                    onChange={(e) => setHeuristicType(e.target.value)} 
+                <motion.select
+                    value={heuristicType}
+                    onChange={(e) => setHeuristicType(e.target.value)}
                     className={`${selectClasses} mb-3 cursor-pointer`}
                     whileFocus={{ scale: 1.02 }}
                 >
@@ -202,7 +203,7 @@ const AlgorithmPanel = ({ nodes, graphType, isRunning, onRunAlgorithm }) => {
             </motion.div>
 
             {/* MST Algorithms */}
-            <motion.div 
+            <motion.div
                 className="mb-6"
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -212,7 +213,7 @@ const AlgorithmPanel = ({ nodes, graphType, isRunning, onRunAlgorithm }) => {
                     <svg className="h-5 w-5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
                     </svg>
-                    Minimum Spanning Tree
+                    Spanning Trees & All-Pairs
                 </h3>
                 <div className="grid grid-cols-1 gap-3">
                     <motion.button
@@ -247,11 +248,27 @@ const AlgorithmPanel = ({ nodes, graphType, isRunning, onRunAlgorithm }) => {
                             Run Kruskal's
                         </span>
                     </motion.button>
+                    <motion.button
+                        onClick={handleRunFloydWarshall}
+                        disabled={nodes.length === 0 || isRunning}
+                        className="w-full relative overflow-hidden px-5 py-3 font-semibold rounded-xl text-white shadow-lg"
+                        variants={buttonVariants}
+                        whileHover={!isRunning && nodes.length > 0 ? "hover" : {}}
+                        whileTap={!isRunning && nodes.length > 0 ? "tap" : {}}
+                    >
+                        <div className={`absolute inset-0 bg-gradient-to-r from-cyan-500 to-teal-600 ${(nodes.length === 0 || isRunning) ? 'opacity-50' : ''}`} />
+                        <span className="relative z-10 flex items-center justify-center gap-2">
+                            <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                            </svg>
+                            Run Floyd-Warshall
+                        </span>
+                    </motion.button>
                 </div>
             </motion.div>
 
             {/* Topological Sort */}
-            <motion.div 
+            <motion.div
                 className="pt-6 border-t border-gray-200 dark:border-gray-700"
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}

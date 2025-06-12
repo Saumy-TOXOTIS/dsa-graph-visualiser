@@ -17,6 +17,7 @@ import { useCanvas } from './hooks/useCanvas';
 import { buildAdjacencyList, buildAdjacencyMatrix } from './utils/graphUtils';
 import { findCycle, findConnectedComponents } from './algorithms';
 import GraphAnalysisPanel from './components/sidebar/GraphAnalysisPanel';
+import FloydWarshallPanel from './components/info/FloydWarshallPanel';
 
 export default function GraphVisualizer() {
   const [theme, setTheme] = useState('dark');
@@ -55,7 +56,7 @@ export default function GraphVisualizer() {
   const {
     currentAlgorithm, isRunning, isPaused, speed, progress,
     runAlgorithm, resetAlgorithm, setSpeed, setIsPaused,
-    traversalResult, dijkstraResult, primResult, aStarResult, kruskalResult, topoSortResult, bellmanFordResult,
+    traversalResult, dijkstraResult, primResult, aStarResult, kruskalResult, topoSortResult, bellmanFordResult, floydWarshallResult,
   } = useAlgorithmRunner();
 
   // 2. Graph State can safely use `resetAlgorithm`.
@@ -67,7 +68,7 @@ export default function GraphVisualizer() {
   } = useGraphState(resetAlgorithm);
 
   // 3. Canvas gets all the data it needs to draw.
-  const algorithmResults = { traversalResult, dijkstraResult, primResult, aStarResult, kruskalResult, topoSortResult, bellmanFordResult, cycleResult, componentsResult, currentAlgorithm };
+  const algorithmResults = { traversalResult, dijkstraResult, primResult, aStarResult, kruskalResult, topoSortResult, bellmanFordResult, floydWarshallResult, cycleResult, componentsResult, currentAlgorithm };
   const {
     canvasRef, containerRef, contextMenu, setContextMenu, closeContextMenu,
         isDrawingEdge, setIsDrawingEdge, hoveredElement, setHoveredElement,
@@ -349,7 +350,13 @@ export default function GraphVisualizer() {
         <Sidebar {...sidebarProps} />
         <div>
           <CanvasArea {...canvasAreaProps} />
-          <InfoPanel nodes={nodes} edges={edges} graphType={graphType} algoResults={algorithmResults} />
+          {floydWarshallResult ? (
+            <FloydWarshallPanel result={floydWarshallResult} nodes={sortedNodesForDataView} />
+          ) : (
+            <>
+              <InfoPanel nodes={nodes} edges={edges} graphType={graphType} algoResults={algorithmResults} />
+            </>
+          )}
           <DataViewPanel adjList={adjacencyList} adjMatrix={adjacencyMatrix} nodes={sortedNodesForDataView} />
         </div>
       </main>

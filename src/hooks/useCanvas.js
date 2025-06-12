@@ -19,7 +19,7 @@ const darkenColor = (hex, percent) => {
 }
 
 const getNodeStyle = (node, isHovered, algorithmResults, edges) => {
-    const { traversalResult, dijkstraResult, primResult, kruskalResult, aStarResult, topoSortResult, bellmanFordResult, cycleResult, componentsResult, currentAlgorithm } = algorithmResults;
+    const { floydWarshallResult, traversalResult, dijkstraResult, primResult, kruskalResult, aStarResult, topoSortResult, bellmanFordResult, cycleResult, componentsResult, currentAlgorithm } = algorithmResults;
     let state = 'default', shouldPulse = false, specificColor = null;
 
     if (currentAlgorithm === 'Kruskal' && kruskalResult?.dsuSets) {
@@ -35,10 +35,14 @@ const getNodeStyle = (node, isHovered, algorithmResults, edges) => {
             return edge && (edge.start === node.id || edge.end === node.id);
         };
 
-        if (topoSortResult?.cycleNodes?.includes(node.id)) { state = 'target'; shouldPulse = true; }
+        if (currentAlgorithm === 'FloydWarshall' && floydWarshallResult) {
+            if (floydWarshallResult.k === node.id) { state = 'current'; shouldPulse = true; }
+            else if (floydWarshallResult.i === node.id || floydWarshallResult.j === node.id) state = 'source';
+            if (floydWarshallResult.negativeCyclePath?.includes(node.id)) { state = 'target'; shouldPulse = true; }
+        }
+        else if (topoSortResult?.cycleNodes?.includes(node.id)) { state = 'target'; shouldPulse = true; }
         else if (bellmanFordResult?.negativeCyclePath?.includes(node.id)) { state = 'target'; shouldPulse = true; }
         else if (
-            (currentAlgorithm === 'TopologicalSort' && topoSortResult?.currentNodeId === node.id) ||
             (currentAlgorithm === 'Prim' && primResult?.currentNodeId === node.id) ||
             (currentAlgorithm === 'BFS' && traversalResult?.currentStep === node.id) ||
             (currentAlgorithm === 'DFS' && traversalResult?.currentNode === node.id) ||
@@ -46,6 +50,7 @@ const getNodeStyle = (node, isHovered, algorithmResults, edges) => {
             (currentAlgorithm === 'AStar' && aStarResult?.currentNodeId === node.id) ||
             (currentAlgorithm === 'BellmanFord' && bellmanFordResult?.updatedNodeId === node.id) ||
             (currentAlgorithm === 'Kruskal' && kruskalResult.type === 'accept_edge' && isCurrentEdgeNode(kruskalResult.currentEdgeId))
+            (currentAlgorithm === 'TopologicalSort' && topoSortResult?.currentNodeId === node.id)
         ) { state = 'current'; shouldPulse = true; }
         else if (currentAlgorithm === 'BellmanFord' && bellmanFordResult?.highlightedEdgeId && isCurrentEdgeNode(bellmanFordResult.highlightedEdgeId)) state = 'exploring';
         else if (currentAlgorithm === 'AStar' && aStarResult?.openSet?.has(node.id)) state = 'openSet';
@@ -72,11 +77,31 @@ const getNodeStyle = (node, isHovered, algorithmResults, edges) => {
     return { state, shouldPulse, specificColor };
 };
 
-const getEdgeStyle = (edge, isHovered, algorithmResults, graphType) => {
-    const { traversalResult, dijkstraResult, primResult, kruskalResult, aStarResult, topoSortResult, bellmanFordResult, cycleResult, currentAlgorithm } = algorithmResults;
+const getEdgeStyle = (edge, isHovered, algorithmResults, graphType, edges) => {
+    const { floydWarshallResult, traversalResult, dijkstraResult, primResult, kruskalResult, aStarResult, topoSortResult, bellmanFordResult, cycleResult, currentAlgorithm } = algorithmResults;
     let state = 'default', isRejected = false;
 
-    if (currentAlgorithm === 'TopologicalSort' && topoSortResult) {
+    const getPathEdges = (u, v, next, allEdges) => {
+        if (!next || !next[u] || !next[u][v]) return [];
+        const pathEdges = [];
+        let current = u;
+        while(current !== v) {
+            const nextNode = next[current][v];
+            if(!nextNode) break;
+            const foundEdge = allEdges.find(e => (e.start === current && e.end === nextNode) || (graphType === 'undirected' && e.start === nextNode && e.end === current));
+            if(foundEdge) pathEdges.push(foundEdge.id);
+            else break;
+            current = nextNode;
+        }
+        return pathEdges;
+    }
+
+    if (currentAlgorithm === 'FloydWarshall' && floydWarshallResult) {
+        if (floydWarshallResult.negativeCyclePath && isEdgeInPath(edge, floydWarshallResult.negativeCyclePath, graphType)) state = 'target';
+        else if (floydWarshallResult.i && floydWarshallResult.k && getPathEdges(floydWarshallResult.i, floydWarshallResult.k, floydWarshallResult.next, edges).includes(edge.id)) state = 'exploring';
+        else if (floydWarshallResult.k && floydWarshallResult.j && getPathEdges(floydWarshallResult.k, floydWarshallResult.j, floydWarshallResult.next, edges).includes(edge.id)) state = 'exploring';
+    }
+    else if (currentAlgorithm === 'TopologicalSort' && topoSortResult) {
         if (topoSortResult.processedEdgeId === edge.id) state = 'exploring';
         else if(topoSortResult.sortedOrder?.includes(edge.start)) state = 'visited';
     }
@@ -158,7 +183,7 @@ export const useCanvas = (nodes, edges, theme, graphType, algorithmResults, setN
             const startNode = nodes.find(n => n.id === edge.start), endNode = nodes.find(n => n.id === edge.end);
             if (!startNode || !endNode) return;
             const isHovered = hoveredElement?.type === 'edge' && hoveredElement.id === edge.id;
-            const style = getEdgeStyle(edge, isHovered, algorithmResults, graphType);
+            const style = getEdgeStyle(edge, isHovered, algorithmResults, graphType, edges);
             ctx.globalAlpha = (style.state === 'rejected') ? 0.3 : 1.0;
             ctx.beginPath(); ctx.moveTo(startNode.x, startNode.y); ctx.lineTo(endNode.x, endNode.y);
             let edgeColor = colors[`edge${style.state.charAt(0).toUpperCase() + style.state.slice(1)}`] || colors.edgeDefault;

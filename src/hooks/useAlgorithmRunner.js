@@ -16,6 +16,7 @@ export const useAlgorithmRunner = (nodes, edges) => {
     const [kruskalResult, setKruskalResult] = useState(null);
     const [topoSortResult, setTopoSortResult] = useState(null);
     const [bellmanFordResult, setBellmanFordResult] = useState(null);
+    const [floydWarshallResult, setFloydWarshallResult] = useState(null);
     const animationRef = useRef(null);
     const stepsRef = useRef([]);
     const edgesRef = useRef([]); // Use a ref to hold edges for the animation closure
@@ -36,6 +37,7 @@ export const useAlgorithmRunner = (nodes, edges) => {
         setKruskalResult(null);
         setTopoSortResult(null);
         setBellmanFordResult(null);
+        setFloydWarshallResult(null);
     }, []);
 
     const animate = useCallback((algorithm) => {
@@ -86,6 +88,9 @@ export const useAlgorithmRunner = (nodes, edges) => {
                     setTopoSortResult(prev => ({...prev, ...step, stepIndex: i}));
                     break;
                 }
+                case 'FloydWarshall':
+                    setFloydWarshallResult(prev => ({...prev, ...step}));
+                    break;
                 default:
                     break;
             }
@@ -210,6 +215,15 @@ export const useAlgorithmRunner = (nodes, edges) => {
                 }
                 break;
             }
+            case 'FloydWarshall': {
+                const result = algo.generateFloydWarshallSteps(nodes, edges, graphType);
+                if (result.steps?.length) {
+                    stepsRef.current = result.steps;
+                    setFloydWarshallResult({ ...result.steps[0], stepIndex: -1 });
+                    animate('FloydWarshall');
+                }
+                break;
+            }
             default:
                 break;
         }
@@ -217,7 +231,7 @@ export const useAlgorithmRunner = (nodes, edges) => {
 
     return {
         currentAlgorithm, isRunning, isPaused, speed, progress,
-        traversalResult, dijkstraResult, primResult, aStarResult, kruskalResult, topoSortResult, bellmanFordResult,
+        traversalResult, dijkstraResult, primResult, aStarResult, kruskalResult, topoSortResult, bellmanFordResult, floydWarshallResult,
         runAlgorithm,
         resetAlgorithm: reset,
         setSpeed,

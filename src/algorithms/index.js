@@ -728,6 +728,100 @@ export const generateTopologicalSortSteps = (nodes, edges) => {
     return { steps, sortedOrder, cycleDetected: false };
 };
 
+/* ==== Floyd-Warshall ==== */
+export const generateFloydWarshallSteps = (nodes, edges, graphType) => {
+    if (nodes.length === 0) return { steps: [] };
+
+    const steps = [];
+    const dist = {};
+    const next = {};
+    const nodeIds = nodes.map(n => n.id);
+
+    // Initialize dist and next matrices
+    for (const u of nodeIds) {
+        dist[u] = {};
+        next[u] = {};
+        for (const v of nodeIds) {
+            dist[u][v] = Infinity;
+            next[u][v] = null;
+        }
+        dist[u][u] = 0;
+        next[u][u] = u;
+    }
+
+    for (const edge of edges) {
+        dist[edge.start][edge.end] = edge.weight;
+        next[edge.start][edge.end] = edge.end;
+        if (graphType === 'undirected') {
+            dist[edge.end][edge.start] = edge.weight;
+            next[edge.end][edge.start] = edge.start;
+        }
+    }
+
+    steps.push({
+        type: 'initial',
+        distances: JSON.parse(JSON.stringify(dist)),
+        next: JSON.parse(JSON.stringify(next)),
+        k: null, i: null, j: null,
+        passNumber: 0
+    });
+
+    for (const k of nodeIds) {
+        for (const i of nodeIds) {
+            for (const j of nodeIds) {
+                
+                steps.push({
+                    type: 'check_path',
+                    distances: JSON.parse(JSON.stringify(dist)),
+                    next: JSON.parse(JSON.stringify(next)),
+                    k, i, j,
+                    passNumber: `k=${nodes.find(n=>n.id===k)?.value}`
+                });
+
+                if (dist[i][k] + dist[k][j] < dist[i][j]) {
+                    dist[i][j] = dist[i][k] + dist[k][j];
+                    next[i][j] = next[i][k];
+                    
+                    steps.push({
+                        type: 'update_path',
+                        distances: JSON.parse(JSON.stringify(dist)),
+                        next: JSON.parse(JSON.stringify(next)),
+                        k, i, j,
+                        passNumber: `k=${nodes.find(n=>n.id===k)?.value}`
+                    });
+                }
+            }
+        }
+    }
+
+    // Check for negative cycles
+    let negativeCyclePath = null;
+    for (const i of nodeIds) {
+        if (dist[i][i] < 0) {
+            // Found a negative cycle, now reconstruct it
+            negativeCyclePath = [i];
+            let current = next[i][i];
+            while(current !== i){
+                negativeCyclePath.push(current);
+                current = next[current][i];
+            }
+            negativeCyclePath.push(i);
+            break;
+        }
+    }
+
+    steps.push({
+        type: 'done',
+        distances: JSON.parse(JSON.stringify(dist)),
+        next: JSON.parse(JSON.stringify(next)),
+        k: null, i: null, j: null,
+        passNumber: "Done",
+        negativeCyclePath
+    });
+
+    return { steps };
+};
+
 /* ==== Find Cycle ==== */
 
 export const findCycle = (nodes, edges, graphType) => {
