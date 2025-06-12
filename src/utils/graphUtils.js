@@ -66,7 +66,7 @@ export const buildAdjacencyMatrix = (nodes, edges, graphType) => {
     const nodeIndexMap = new Map();
     // Sort nodes by value for a consistent matrix order
     const sortedNodes = [...nodes].sort((a, b) => a.value.localeCompare(b.value));
-    
+
     sortedNodes.forEach((node, index) => {
         nodeIndexMap.set(node.id, index);
     });

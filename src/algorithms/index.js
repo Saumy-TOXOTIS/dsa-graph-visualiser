@@ -25,7 +25,7 @@ export const generateBfsSteps = (nodes, edges, graphType, startNode) => {
     while (queue.length > 0) {
         const { nodeId, sourceNode } = queue.shift();
         const neighbors = adjacencyList[nodeId] || [];
-        
+
         // --- NEW: Exploring Phase ---
         // Get edges to unvisited neighbors for the "scan" effect
         const exploringEdges = neighbors
@@ -41,7 +41,7 @@ export const generateBfsSteps = (nodes, edges, graphType, startNode) => {
                 exploringEdgeIds: exploringEdges, // Highlight edges being considered
             });
         }
-        
+
         // --- NEW: Traversing Phase (for each neighbor) ---
         for (const neighbor of neighbors) {
             if (!visited.has(neighbor.node)) {
@@ -177,7 +177,7 @@ export const generateDijkstraResult = (nodes, edges, graphType, startId, targetI
         for (const neighbor of neighbors) {
             if (!visited.has(neighbor.node)) {
                 const alt = distances[closest] + neighbor.weight;
-                
+
                 // Step: Relax Edge (before update)
                 steps.push({
                     type: 'relax_edge',
@@ -186,7 +186,7 @@ export const generateDijkstraResult = (nodes, edges, graphType, startId, targetI
                     distances: { ...distances },
                     visitedOrder: [...visited],
                 });
-                
+
                 if (alt < distances[neighbor.node]) {
                     distances[neighbor.node] = alt;
                     previous[neighbor.node] = { nodeId: closest, edgeId: neighbor.edgeId };
@@ -194,13 +194,13 @@ export const generateDijkstraResult = (nodes, edges, graphType, startId, targetI
             }
         }
     }
-    
+
     // Path reconstruction
     const path = [];
     const pathEdges = [];
     let current = targetId;
 
-    if(distances[current] !== Infinity) {
+    if (distances[current] !== Infinity) {
         while (current !== null) {
             path.unshift(current);
             const prev = previous[current];
@@ -214,7 +214,7 @@ export const generateDijkstraResult = (nodes, edges, graphType, startId, targetI
             }
         }
     }
-    
+
     if (path[0] !== startId) {
         return { path: [], pathEdges: [], distances, visitedOrder: [...visited], steps };
     }
@@ -225,91 +225,108 @@ export const generateDijkstraResult = (nodes, edges, graphType, startId, targetI
 /* ==== A-Star ==== */
 
 export const generateAStarResult = (nodes, edges, graphType, startId, targetId, heuristicType) => {
-    if (!startId || !targetId || nodes.length === 0) return null;
+    if (!startId || !targetId || nodes.length === 0) return { steps: [] };
 
     const adjacencyList = buildAdjacencyList(nodes, edges, graphType);
     const openSet = new Set([startId]);
+    const closedSet = new Set();
     const cameFrom = {};
-    const gScore = {};
-    const fScore = {};
 
+    const gScores = {}, fScores = {}, hScores = {};
     nodes.forEach(node => {
-        gScore[node.id] = Infinity;
-        fScore[node.id] = Infinity;
+        gScores[node.id] = Infinity;
+        fScores[node.id] = Infinity;
     });
-
-    gScore[startId] = 0;
-
+    
     const heuristic = (aId, bId) => {
-        const nodeA = nodes.find(n => n.id === aId);
-        const nodeB = nodes.find(n => n.id === bId);
+        const nodeA = nodes.find(n => n.id === aId), nodeB = nodes.find(n => n.id === bId);
         if (!nodeA || !nodeB) return Infinity;
-
-        if (heuristicType === 'manhattan') {
-            return Math.abs(nodeA.x - nodeB.x) + Math.abs(nodeA.y - nodeB.y);
-        }
-        // Default to Euclidean
+        if (heuristicType === 'manhattan') return Math.abs(nodeA.x - nodeB.x) + Math.abs(nodeA.y - nodeB.y);
         return Math.sqrt(Math.pow(nodeA.x - nodeB.x, 2) + Math.pow(nodeA.y - nodeB.y, 2));
     };
-
-    fScore[startId] = heuristic(startId, targetId);
+    
+    nodes.forEach(node => { hScores[node.id] = heuristic(node.id, targetId); });
+    gScores[startId] = 0;
+    fScores[startId] = hScores[startId];
 
     const steps = [];
-    const visitedOrder = [];
+    steps.push({
+        type: 'initial',
+        openSet: new Set(openSet), closedSet: new Set(closedSet),
+        gScores: { ...gScores }, fScores: { ...fScores }, hScores: { ...hScores },
+        currentNodeId: null, relaxingEdgeId: null, path: [], pathEdges: []
+    });
 
     while (openSet.size > 0) {
         let current = null;
-        let lowestFScore = Infinity;
-
         for (const nodeId of openSet) {
-            if (fScore[nodeId] < lowestFScore) {
-                lowestFScore = fScore[nodeId];
+            if (current === null || fScores[nodeId] < fScores[current]) {
                 current = nodeId;
             }
         }
 
-        if (current === targetId) {
-            // --- MODIFICATION: A* Path Reconstruction with Edges ---
-            const path = [];
-            const pathEdges = []; // NEW
-            let temp = current;
-            while (cameFrom[temp] !== undefined) {
-                const prevNode = cameFrom[temp];
-                path.unshift(temp);
-                const edge = edges.find(e =>
-                    (e.start === prevNode && e.end === temp) ||
-                    (graphType === 'undirected' && e.start === temp && e.end === prevNode)
-                );
-                if (edge) pathEdges.unshift(edge.id);
-                temp = prevNode;
-            }
-            path.unshift(startId); // Add the start node
-            steps.push({ current, visitedOrder: [...visitedOrder, current] });
-            return { path, pathEdges, visitedOrder, steps };
-        }
+        if (current === targetId) break;
 
         openSet.delete(current);
-        visitedOrder.push(current);
-        steps.push({ current, visitedOrder: [...visitedOrder] });
+        closedSet.add(current);
+
+        steps.push({
+            type: 'select_node',
+            openSet: new Set(openSet), closedSet: new Set(closedSet),
+            gScores: { ...gScores }, fScores: { ...fScores }, hScores: { ...hScores },
+            currentNodeId: current, relaxingEdgeId: null, path: [], pathEdges: []
+        });
 
         const neighbors = adjacencyList[current] || [];
         for (const neighbor of neighbors) {
-            const tentativeGScore = gScore[current] + neighbor.weight;
+            if (closedSet.has(neighbor.node)) continue;
 
-            if (tentativeGScore < gScore[neighbor.node]) {
-                cameFrom[neighbor.node] = current;
-                gScore[neighbor.node] = tentativeGScore;
-                fScore[neighbor.node] = tentativeGScore + heuristic(neighbor.node, targetId);
-
+            const tentativeGScore = gScores[current] + neighbor.weight;
+            
+            steps.push({
+                type: 'relax_edge',
+                openSet: new Set(openSet), closedSet: new Set(closedSet),
+                gScores: { ...gScores }, fScores: { ...fScores }, hScores: { ...hScores },
+                currentNodeId: current, relaxingEdgeId: neighbor.edgeId, path: [], pathEdges: []
+            });
+            
+            if (tentativeGScore < gScores[neighbor.node]) {
+                cameFrom[neighbor.node] = { prevNode: current, edgeId: neighbor.edgeId };
+                gScores[neighbor.node] = tentativeGScore;
+                fScores[neighbor.node] = tentativeGScore + hScores[neighbor.node];
                 if (!openSet.has(neighbor.node)) {
                     openSet.add(neighbor.node);
                 }
             }
         }
     }
+    
+    // --- THE FIX IS HERE ---
+    let finalPath = [], finalPathEdges = [], totalDistance = Infinity;
 
-    // No path found
-    return { path: [], pathEdges: [], visitedOrder, steps };
+    if (closedSet.has(targetId) || openSet.has(targetId)) {
+        totalDistance = gScores[targetId]; // Get the final cost
+        let temp = targetId;
+        while(cameFrom[temp]){
+            finalPath.unshift(temp);
+            const {prevNode, edgeId} = cameFrom[temp];
+            finalPathEdges.unshift(edgeId);
+            temp = prevNode;
+        }
+        finalPath.unshift(startId);
+        
+        steps.push({
+            type: 'found_path',
+            path: finalPath, pathEdges: finalPathEdges, openSet, closedSet,
+            gScores, fScores, hScores,
+            currentNodeId: targetId, relaxingEdgeId: null
+        });
+    } else {
+        steps.push({ type: 'no_path', openSet, closedSet, gScores, fScores, hScores, path: [], pathEdges: [] });
+    }
+    
+    // Return the steps and the final calculated distance
+    return { steps, totalDistance };
 };
 
 /* ==== Bellman Ford ==== */
@@ -352,7 +369,7 @@ export const generateBellmanFordSteps = (nodes, edges, graphType, startNodeId) =
             });
 
             // --- FIX: Check both directions for undirected graphs ---
-            
+
             // Direction 1: start -> end
             if (distances[edge.start] !== Infinity && distances[edge.start] + edge.weight < distances[edge.end]) {
                 distances[edge.end] = distances[edge.start] + edge.weight;
@@ -389,36 +406,36 @@ export const generateBellmanFordSteps = (nodes, edges, graphType, startNodeId) =
     let negativeCyclePath = null;
     for (const edge of edges) {
         if (distances[edge.start] !== Infinity && distances[edge.start] + edge.weight < distances[edge.end]) {
-             let cycleNode = edge.end;
-             for (let i = 0; i < nodes.length; i++) {
+            let cycleNode = edge.end;
+            for (let i = 0; i < nodes.length; i++) {
                 cycleNode = predecessors[cycleNode]?.nodeId;
-             }
-             const cycle = [];
-             let current = cycleNode;
-             while (true) {
+            }
+            const cycle = [];
+            let current = cycleNode;
+            while (true) {
                 cycle.push(current);
                 const prev = predecessors[current];
                 if (!prev) break;
                 current = prev.nodeId;
                 if (current === cycleNode) { cycle.push(current); break; }
-             }
-             negativeCyclePath = cycle.reverse();
-             break;
+            }
+            negativeCyclePath = cycle.reverse();
+            break;
         }
         // --- FIX: Check for negative cycles in reverse direction too ---
         if (graphType === 'undirected' && distances[edge.end] !== Infinity && distances[edge.end] + edge.weight < distances[edge.start]) {
             let cycleNode = edge.start;
             for (let i = 0; i < nodes.length; i++) {
-               cycleNode = predecessors[cycleNode]?.nodeId;
+                cycleNode = predecessors[cycleNode]?.nodeId;
             }
             const cycle = [];
             let current = cycleNode;
             while (true) {
-               cycle.push(current);
-               const prev = predecessors[current];
-               if (!prev) break;
-               current = prev.nodeId;
-               if (current === cycleNode) { cycle.push(current); break; }
+                cycle.push(current);
+                const prev = predecessors[current];
+                if (!prev) break;
+                current = prev.nodeId;
+                if (current === cycleNode) { cycle.push(current); break; }
             }
             negativeCyclePath = cycle.reverse();
             break;

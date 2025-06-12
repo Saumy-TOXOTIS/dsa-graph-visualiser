@@ -16,7 +16,7 @@ const ResultItem = ({ node, type }) => {
         current: 'bg-gradient-to-r from-pink-500 to-rose-500 text-white',
     };
     return (
-        <motion.span 
+        <motion.span
             className={`px-3 py-1.5 rounded-full text-sm font-medium shadow-sm ${colors[type] || colors.default}`}
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
@@ -31,7 +31,7 @@ const InfoPanel = ({ nodes, edges, graphType, algoResults }) => {
     const { currentAlgorithm, traversalResult, dijkstraResult, primResult, aStarResult, topoSortResult, bellmanFordResult, kruskalResult } = algoResults;
 
     const findNode = (id) => nodes.find(n => n.id === id);
-    
+
     // --- UPDATED: Logic to decide which array to map over ---
     const traversalDisplayOrder = traversalResult?.visitedNodes || traversalResult?.visitedOrder;
 
@@ -52,23 +52,23 @@ const InfoPanel = ({ nodes, edges, graphType, algoResults }) => {
                         Graph Information
                     </h2>
                 </div>
-                
+
                 <div className="grid grid-cols-2 gap-4 mb-6">
-                    <motion.div 
+                    <motion.div
                         className="bg-gradient-to-br from-indigo-50 to-indigo-100 dark:from-gray-700 dark:to-gray-700/80 p-4 rounded-xl text-center border border-indigo-100 dark:border-gray-600 shadow-sm"
                         whileHover={{ y: -2 }}
                     >
                         <div className="text-sm text-indigo-700 dark:text-indigo-300 mb-1">Total Nodes</div>
                         <div className="text-3xl font-bold text-gray-900 dark:text-white">{nodes.length}</div>
                     </motion.div>
-                    <motion.div 
+                    <motion.div
                         className="bg-gradient-to-br from-indigo-50 to-indigo-100 dark:from-gray-700 dark:to-gray-700/80 p-4 rounded-xl text-center border border-indigo-100 dark:border-gray-600 shadow-sm"
                         whileHover={{ y: -2 }}
                     >
                         <div className="text-sm text-indigo-700 dark:text-indigo-300 mb-1">Total Edges</div>
                         <div className="text-3xl font-bold text-gray-900 dark:text-white">{edges.length}</div>
                     </motion.div>
-                    <motion.div 
+                    <motion.div
                         className="bg-gradient-to-br from-indigo-50 to-indigo-100 dark:from-gray-700 dark:to-gray-700/80 p-4 rounded-xl text-center col-span-2 border border-indigo-100 dark:border-gray-600 shadow-sm"
                         whileHover={{ y: -2 }}
                     >
@@ -92,8 +92,8 @@ const InfoPanel = ({ nodes, edges, graphType, algoResults }) => {
                             const startNode = findNode(edge.start);
                             const endNode = findNode(edge.end);
                             return (
-                                <motion.div 
-                                    key={edge.id} 
+                                <motion.div
+                                    key={edge.id}
                                     className="group bg-white/70 dark:bg-gray-700/70 p-3 rounded-lg border border-gray-200 dark:border-gray-600 flex justify-between items-center text-sm shadow-sm hover:shadow-md transition-all"
                                     whileHover={{ x: 2 }}
                                 >
@@ -101,7 +101,7 @@ const InfoPanel = ({ nodes, edges, graphType, algoResults }) => {
                                         {startNode?.value || '?'}
                                         <span className="mx-2 text-indigo-500 font-sans">
                                             {graphType === 'directed' ? (
-                                                <motion.span 
+                                                <motion.span
                                                     animate={{ x: [0, 2, 0] }}
                                                     transition={{ duration: 2, repeat: Infinity }}
                                                 >
@@ -118,7 +118,7 @@ const InfoPanel = ({ nodes, edges, graphType, algoResults }) => {
                             );
                         })
                     ) : (
-                        <motion.div 
+                        <motion.div
                             className="text-center py-4 text-gray-500"
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
@@ -163,7 +163,7 @@ const InfoPanel = ({ nodes, edges, graphType, algoResults }) => {
                                 {traversalDisplayOrder.map((id, idx) => {
                                     let type = 'default';
                                     if (currentAlgorithm === 'BFS') {
-                                        type = traversalResult.stepIndex >= idx ? 
+                                        type = traversalResult.stepIndex >= idx ?
                                             (traversalResult.currentStep === id ? 'current' : 'visited') : 'default';
                                     } else if (currentAlgorithm === 'DFS') {
                                         // For DFS, we color based on the final state shown in the panel
@@ -173,10 +173,10 @@ const InfoPanel = ({ nodes, edges, graphType, algoResults }) => {
                                     }
 
                                     return (
-                                        <ResultItem 
-                                            key={idx} 
-                                            node={findNode(id)} 
-                                            type={type} 
+                                        <ResultItem
+                                            key={idx}
+                                            node={findNode(id)}
+                                            type={type}
                                         />
                                     );
                                 })}
@@ -201,11 +201,11 @@ const InfoPanel = ({ nodes, edges, graphType, algoResults }) => {
                                 <>
                                     <div className="flex flex-wrap gap-2 mb-3">
                                         {dijkstraResult.path.map((id, idx) => (
-                                            <ResultItem 
-                                                key={idx} 
-                                                node={findNode(id)} 
-                                                type={idx === 0 ? 'start' : 
-                                                    (idx === dijkstraResult.path.length - 1 ? 'target' : 'path')} 
+                                            <ResultItem
+                                                key={idx}
+                                                node={findNode(id)}
+                                                type={idx === 0 ? 'start' :
+                                                    (idx === dijkstraResult.path.length - 1 ? 'target' : 'path')}
                                             />
                                         ))}
                                     </div>
@@ -223,15 +223,22 @@ const InfoPanel = ({ nodes, edges, graphType, algoResults }) => {
                     {aStarResult && (
                         <div>
                             <h3 className="font-semibold text-md mb-2 text-indigo-600 dark:text-indigo-400">A* Path</h3>
-                            {aStarResult.path.length > 0 ? (
+                            {aStarResult.path && aStarResult.path.length > 0 ? (
                                 <>
                                     <div className="flex flex-wrap gap-1.5 mb-2">
                                         {aStarResult.path.map((id, idx) => (
                                             <ResultItem key={idx} node={findNode(id)} type={idx === 0 ? 'start' : (idx === aStarResult.path.length - 1 ? 'target' : 'path')} />
                                         ))}
                                     </div>
+                                    {/* --- THE FIX IS HERE --- */}
+                                    <p className="text-sm bg-indigo-50 dark:bg-gray-700 p-2 rounded-lg border border-indigo-100 dark:border-gray-600">
+                                        <span className="font-medium">Total Distance: </span>
+                                        <span className="font-bold">
+                                            {aStarResult.totalDistance?.toFixed(1) ?? 'N/A'}
+                                        </span>
+                                    </p>
                                 </>
-                            ) : <p>No path found.</p>}
+                            ) : <p className="text-red-500 font-medium">No path found.</p>}
                         </div>
                     )}
 
@@ -262,7 +269,7 @@ const InfoPanel = ({ nodes, edges, graphType, algoResults }) => {
                             </div>
                         </div>
                     )}
-                    
+
                     {bellmanFordResult && (
                         <div>
                             <h3 className="font-semibold text-md mb-2 text-orange-600 dark:text-orange-400">Bellman-Ford Result</h3>
@@ -304,7 +311,7 @@ const InfoPanel = ({ nodes, edges, graphType, algoResults }) => {
                     )}
 
                     {!traversalResult && !dijkstraResult && !primResult && !aStarResult && !topoSortResult && !bellmanFordResult && !kruskalResult && (
-                        <motion.div 
+                        <motion.div
                             className="text-center py-6 text-gray-500"
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}

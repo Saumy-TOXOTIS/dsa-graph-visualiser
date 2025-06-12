@@ -48,6 +48,9 @@ export const useAlgorithmRunner = (nodes, edges) => {
                 clearInterval(animationRef.current);
                 setIsRunning(false);
                 setProgress(100);
+                if (algorithm === 'AStar' && stepsRef.current.length > 0) {
+                    setAStarResult(prev => ({ ...prev, ...stepsRef.current[stepsRef.current.length - 1] }));
+                }
                 return;
             }
             const step = stepsRef.current[i];
@@ -67,6 +70,10 @@ export const useAlgorithmRunner = (nodes, edges) => {
                     setBellmanFordResult(prev => ({ ...prev, ...step, stepIndex: i }));
                     break;
                 }
+                case 'AStar': {
+                    setAStarResult(prev => ({ ...prev, ...step, stepIndex: i }));
+                    break;
+                }
                 case 'Prim': {
                     const mstEdgeIds = step.mstEdges.map(e => {
                         const originalEdge = edgesRef.current.find(edge =>
@@ -76,10 +83,6 @@ export const useAlgorithmRunner = (nodes, edges) => {
                         return originalEdge?.id;
                     }).filter(Boolean);
                     setPrimResult(prev => ({ ...prev, mstNodes: step.visitedSoFar, mstEdges: step.mstEdges, mstEdgeIds: mstEdgeIds, currentStep: step.currentStep, stepIndex: i }));
-                    break;
-                }
-                case 'AStar': {
-                    setAStarResult(prev => ({ ...prev, visitedOrder: step.visitedOrder, currentStep: step.current, stepIndex: i }));
                     break;
                 }
                 case 'Kruskal': {
@@ -168,21 +171,29 @@ export const useAlgorithmRunner = (nodes, edges) => {
                 }
                 break;
             }
+            case 'AStar': {
+                const result = algo.generateAStarResult(nodes, edges, graphType, dijkstraStart, dijkstraTarget, heuristicType);
+                if (result?.steps.length) {
+                    stepsRef.current = result.steps;
+                    // --- THE FIX IS HERE ---
+                    // Initialize with the first step and GUARANTEE path/pathEdges are empty arrays.
+                    setAStarResult({
+                        ...result.steps[0],
+                        totalDistance: result.totalDistance,
+                        path: [],
+                        pathEdges: [],
+                        stepIndex: -1
+                    });
+                    animate('AStar');
+                }
+                break;
+            }
             case 'Prim': {
                 const steps = algo.generatePrimSteps(nodes, edges, graphType);
                 if (steps?.length > 0) {
                     stepsRef.current = steps;
                     setPrimResult({ mstNodes: [], mstEdges: [], mstEdgeIds: [], currentStep: null, stepIndex: -1 });
                     animate('Prim');
-                }
-                break;
-            }
-            case 'AStar': {
-                const result = algo.generateAStarResult(nodes, edges, graphType, dijkstraStart, dijkstraTarget, heuristicType);
-                if (result) {
-                    stepsRef.current = result.steps;
-                    setAStarResult({ ...result, start: dijkstraStart, target: dijkstraTarget, currentStep: null, stepIndex: -1 });
-                    animate('AStar');
                 }
                 break;
             }
