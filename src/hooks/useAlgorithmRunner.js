@@ -51,18 +51,22 @@ export const useAlgorithmRunner = (nodes, edges) => {
                 return;
             }
             const step = stepsRef.current[i];
-            
+
             switch (algorithm) {
                 case 'BFS':
                     setTraversalResult(prev => ({ ...prev, ...step, stepIndex: i }));
                     break;
                 case 'DFS':
-                     // --- UPDATED: Pass the entire new DFS step object ---
+                    // --- UPDATED: Pass the entire new DFS step object ---
                     setTraversalResult(prev => ({ ...prev, ...step, stepIndex: i }));
                     break;
                 case 'Dijkstra':
                     setDijkstraResult(prev => ({ ...prev, ...step, stepIndex: i }));
                     break;
+                case 'BellmanFord': {
+                    setBellmanFordResult(prev => ({ ...prev, ...step, stepIndex: i }));
+                    break;
+                }
                 case 'Prim': {
                     const mstEdgeIds = step.mstEdges.map(e => {
                         const originalEdge = edgesRef.current.find(edge =>
@@ -85,10 +89,6 @@ export const useAlgorithmRunner = (nodes, edges) => {
                 }
                 case 'TopologicalSort': {
                     setTopoSortResult(step);
-                    break;
-                }
-                case 'BellmanFord': {
-                    setBellmanFordResult(step);
                     break;
                 }
                 default:
@@ -157,6 +157,17 @@ export const useAlgorithmRunner = (nodes, edges) => {
                 }
                 break;
             }
+            case 'BellmanFord': {
+                const result = algo.generateBellmanFordSteps(nodes, edges, graphType, startNode);
+                if (result?.steps.length > 0) {
+                    stepsRef.current = result.steps;
+                    setBellmanFordResult({ ...result, stepIndex: -1 });
+                    animate('BellmanFord');
+                } else {
+                    alert("Could not run Bellman-Ford. Ensure a start node is selected.");
+                }
+                break;
+            }
             case 'Prim': {
                 const steps = algo.generatePrimSteps(nodes, edges, graphType);
                 if (steps?.length > 0) {
@@ -190,18 +201,6 @@ export const useAlgorithmRunner = (nodes, edges) => {
                     stepsRef.current = result.steps;
                     setTopoSortResult({ sortedOrder: [], cycleDetected: false }); // Initialize
                     animate('TopologicalSort');
-                }
-                break;
-            }
-            case 'BellmanFord': {
-                const result = algo.generateBellmanFordSteps(nodes, edges, startNode);
-                if (result && result.steps && result.steps.length > 0) {
-                    stepsRef.current = result.steps;
-                    setBellmanFordResult(result.steps[0]); // Set initial state from the first step
-                    animate('BellmanFord');
-                } else {
-                    console.error("Bellman-Ford did not run. Ensure a start node is selected.");
-                    alert("Could not run Bellman-Ford. Ensure a start node is selected.");
                 }
                 break;
             }

@@ -27,30 +27,40 @@ const getNodeStyle = (node, isHovered, algorithmResults, edges) => {
     let shouldPulse = false;
 
     if (currentAlgorithm) {
-        const isDFS = currentAlgorithm === 'DFS', isBFS = currentAlgorithm === 'BFS', isDijkstra = currentAlgorithm === 'Dijkstra';
-
-        if (
-            (isBFS && traversalResult?.currentStep === node.id) ||
-            (isDFS && traversalResult?.currentNode === node.id) ||
+        const isDijkstra = currentAlgorithm === 'Dijkstra', isBellman = currentAlgorithm === 'BellmanFord';
+        
+        // Highest priority: Negative Cycle
+        if (bellmanFordResult?.negativeCyclePath?.includes(node.id)) {
+            state = 'target'; shouldPulse = true;
+        }
+        // Next priority: Actively being updated
+        else if (
+            (currentAlgorithm === 'BFS' && traversalResult?.currentStep === node.id) ||
+            (currentAlgorithm === 'DFS' && traversalResult?.currentNode === node.id) ||
             (isDijkstra && dijkstraResult?.currentNodeId === node.id) ||
+            (isBellman && bellmanFordResult?.updatedNodeId === node.id) ||
             (primResult?.currentStep === node.id) || (aStarResult?.current === node.id) ||
-            (topoSortResult?.currentNode === node.id) ||
-            (kruskalResult?.currentEdgeId && (edges.find(e => e.id === kruskalResult.currentEdgeId)?.start === node.id || edges.find(e => e.id === kruskalResult.currentEdgeId)?.end === node.id)) ||
-            (bellmanFordResult?.highlightedEdge && (edges.find(e => e.id === bellmanFordResult.highlightedEdge)?.start === node.id || edges.find(e => e.id === bellmanFordResult.highlightedEdge)?.end === node.id))
+            (topoSortResult?.currentNode === node.id)
         ) {
             state = 'current'; shouldPulse = true;
-        } 
-        else if (isDFS && traversalResult?.pathStack?.includes(node.id)) state = 'pathStack';
-        else if (isBFS && traversalResult?.sourceNode === node.id) state = 'source';
-        else if (dijkstraResult?.path.includes(node.id) || aStarResult?.path.includes(node.id) || (cycleResult?.isCyclic && cycleResult.path?.includes(node.id)) || (bellmanFordResult?.negativeCycle?.includes(node.id))) state = 'path';
-        else if ((dijkstraResult?.path[0] === node.id || aStarResult?.start === node.id) && (isDijkstra || currentAlgorithm === 'AStar')) state = 'start';
-        else if ((dijkstraResult?.path[dijkstraResult.path.length - 1] === node.id || aStarResult?.target === node.id) && (isDijkstra || currentAlgorithm === 'AStar')) state = 'target';
+        }
+        // --- NEW: Highlight nodes of the edge being checked in Bellman-Ford ---
+        else if (isBellman && bellmanFordResult?.highlightedEdgeId) {
+            const highlightedEdge = edges.find(e => e.id === bellmanFordResult.highlightedEdgeId);
+            if (highlightedEdge && (highlightedEdge.start === node.id || highlightedEdge.end === node.id)) {
+                state = 'exploring'; // Assign a non-pulsing state
+            }
+        }
+        // --- END OF NEW LOGIC ---
+        else if (currentAlgorithm === 'DFS' && traversalResult?.pathStack?.includes(node.id)) state = 'pathStack';
+        else if (currentAlgorithm === 'BFS' && traversalResult?.sourceNode === node.id) state = 'source';
+        else if (dijkstraResult?.path.includes(node.id) || aStarResult?.path.includes(node.id) || (cycleResult?.isCyclic && cycleResult.path?.includes(node.id))) state = 'path';
+        else if ((isDijkstra || currentAlgorithm === 'AStar') && (dijkstraResult?.path[0] === node.id || aStarResult?.start === node.id)) state = 'start';
+        else if ((isDijkstra || currentAlgorithm === 'AStar') && (dijkstraResult?.path[dijkstraResult.path.length - 1] === node.id || aStarResult?.target === node.id)) state = 'target';
         else if ((primResult?.mstNodes.includes(node.id)) || (kruskalResult?.mstEdgeIds ? edges.filter(e => kruskalResult.mstEdgeIds.includes(e.id)).flatMap(e => [e.start, e.end]).includes(node.id) : false)) state = 'mst';
         else if (
-            (isBFS && traversalResult?.visitedOrder.includes(node.id)) ||
-            (isDFS && traversalResult?.visitedNodes.includes(node.id)) ||
-            (isDijkstra && dijkstraResult?.visitedOrder.includes(node.id)) ||
-            (aStarResult?.visitedOrder.includes(node.id)) ||
+            (traversalResult?.visitedNodes?.includes(node.id)) || (traversalResult?.visitedOrder?.includes(node.id)) ||
+            (dijkstraResult?.visitedOrder?.includes(node.id)) || (aStarResult?.visitedOrder?.includes(node.id)) ||
             (topoSortResult?.sortedOrder?.includes(node.id))
         ) state = 'visited';
     }
@@ -64,7 +74,13 @@ const getEdgeStyle = (edge, isHovered, algorithmResults, graphType) => {
     const { traversalResult, dijkstraResult, primResult, kruskalResult, aStarResult, bellmanFordResult, cycleResult, currentAlgorithm } = algorithmResults;
     let state = 'default', isRejected = false;
 
-    if (currentAlgorithm === 'BFS' && traversalResult) {
+    if (bellmanFordResult?.negativeCyclePath && isEdgeInPath(edge, bellmanFordResult.negativeCyclePath, graphType)) {
+        state = 'target';
+    }
+    else if (currentAlgorithm === 'BellmanFord' && bellmanFordResult) {
+        if (bellmanFordResult.highlightedEdgeId === edge.id) state = 'exploring';
+    }
+    else if (currentAlgorithm === 'BFS' && traversalResult) {
         if (traversalResult.exploringEdgeIds?.includes(edge.id)) state = 'exploring';
         else if (traversalResult.currentEdgeId === edge.id) state = 'current';
         else if (traversalResult.steps?.slice(0, traversalResult.stepIndex + 1).some(step => step.edgeId === edge.id)) state = 'visited';
@@ -72,22 +88,26 @@ const getEdgeStyle = (edge, isHovered, algorithmResults, graphType) => {
         if (traversalResult.currentEdgeId === edge.id) state = 'current';
         else if (traversalResult.visitedEdgeIds?.includes(edge.id)) state = 'visited';
     } else if (currentAlgorithm === 'Dijkstra' && dijkstraResult) {
-        // --- UPDATED: Dijkstra edge styling ---
         if (dijkstraResult.relaxingEdgeId === edge.id) state = 'exploring';
         else if (dijkstraResult.pathEdges?.includes(edge.id)) state = 'path';
         else if (dijkstraResult.visitedOrder?.includes(edge.start) && dijkstraResult.visitedOrder?.includes(edge.end)) state = 'visited';
     }
     else if (kruskalResult?.currentEdgeId === edge.id && kruskalResult.stepType === 'reject') isRejected = true;
     else if ((dijkstraResult?.pathEdges.includes(edge.id)) || (aStarResult?.pathEdges.includes(edge.id)) || (primResult?.mstEdgeIds?.includes(edge.id)) || (kruskalResult?.mstEdgeIds?.includes(edge.id)) || (cycleResult?.isCyclic && isEdgeInPath(edge, cycleResult.path, graphType))) state = 'path';
-    else if ((kruskalResult?.currentEdgeId === edge.id) || (bellmanFordResult?.highlightedEdge === edge.id)) state = 'current';
+    else if ((kruskalResult?.currentEdgeId === edge.id)) state = 'current';
 
     if (isHovered) state = 'hover';
     return { state, isRejected };
 };
 
 const isEdgeInPath = (edge, path, graphType) => {
-    for (let i = 0; i < path.length; i++) {
-        const u = path[i], v = path[(i + 1) % path.length];
+    if(!path) return false;
+    for (let i = 0; i < path.length -1; i++) {
+        const u = path[i], v = path[i + 1];
+        if ((edge.start === u && edge.end === v) || (graphType === 'undirected' && edge.start === v && edge.end === u)) return true;
+    }
+    if (path.length > 1 && path[0] === path[path.length - 1]) {
+        const u = path[path.length - 2], v = path[0];
         if ((edge.start === u && edge.end === v) || (graphType === 'undirected' && edge.start === v && edge.end === u)) return true;
     }
     return false;
@@ -115,12 +135,17 @@ export const useCanvas = (nodes, edges, theme, graphType, algorithmResults, setN
         ctx.fillStyle = gradient; ctx.fillRect(0, 0, canvas.width, canvas.height);
         
         const colors = {
+            // Node Colors
             default: '#3B82F6', hover: '#F59E0B', visited: '#60A5FA', current: '#EC4899',
             source: '#10B981', pathStack: '#10B981', path: '#10B981', mst: '#8B5CF6',
             start: '#10B981', target: '#EF4444',
+            exploring: '#FBBF24', // New color for nodes being checked
+            
+            // Edge Colors
             edgeDefault: theme === 'light' ? '#4B5563' : '#D1D5DB', edgeHover: '#F59E0B',
             edgeVisited: '#60A5FA', edgeCurrent: '#EC4899', edgePath: '#10B981',
-            edgeExploring: '#FBBF24', edgeRejected: '#ef4444'
+            edgeExploring: '#FBBF24', edgeRejected: '#ef4444',
+            edgeTarget: '#EF4444' // For negative cycle
         };
         
         edges.forEach((edge) => {
@@ -129,16 +154,13 @@ export const useCanvas = (nodes, edges, theme, graphType, algorithmResults, setN
             const isHovered = hoveredElement?.type === 'edge' && hoveredElement.id === edge.id;
             const style = getEdgeStyle(edge, isHovered, algorithmResults, graphType);
             ctx.beginPath(); ctx.moveTo(startNode.x, startNode.y); ctx.lineTo(endNode.x, endNode.y);
-            let edgeColor = colors.edgeDefault;
-            if (style.isRejected) edgeColor = colors.edgeRejected;
-            else if (style.state === 'hover') edgeColor = colors.edgeHover;
-            else if (style.state === 'exploring') edgeColor = colors.edgeExploring;
-            else if (style.state === 'current') edgeColor = colors.edgeCurrent;
-            else if (style.state === 'visited') edgeColor = colors.edgeVisited;
-            else if (style.state === 'path') edgeColor = colors.edgePath;
+            let edgeColor = colors[`edge${style.state.charAt(0).toUpperCase() + style.state.slice(1)}`] || colors.edgeDefault;
+            
             ctx.strokeStyle = edgeColor;
-            ctx.lineWidth = (style.state === 'current' || style.state === 'exploring' || style.state === 'hover' || style.state === 'path') ? 4 : 2.5;
+            const pulseSize = (style.state === 'target' && algorithmResults.bellmanFordResult) ? 4 * (Math.sin(Date.now() / 200) + 1) : 0;
+            ctx.lineWidth = ((style.state !== 'default' && style.state !== 'visited') ? 4 : 2.5) + pulseSize/2;
             ctx.setLineDash(style.isRejected ? [5, 5] : []); ctx.stroke(); ctx.setLineDash([]);
+            
             ctx.fillStyle = isHovered ? '#f59e0b' : (theme === "light" ? '#1F2937' : '#D1D5DB');
             ctx.font = 'bold 14px sans-serif'; ctx.textAlign = 'center';
             ctx.fillText(edge.weight.toFixed(1), (startNode.x + endNode.x) / 2, (startNode.y + endNode.y) / 2 - 15);
@@ -150,7 +172,7 @@ export const useCanvas = (nodes, edges, theme, graphType, algorithmResults, setN
                 ctx.moveTo(endX, endY);
                 ctx.lineTo(endX - arrowLength * Math.cos(angle - Math.PI / 6), endY - arrowLength * Math.sin(angle - Math.PI / 6));
                 ctx.lineTo(endX - arrowLength * Math.cos(angle + Math.PI / 6), endY - arrowLength * Math.sin(angle + Math.PI / 6));
-                ctx.closePath(); ctx.fillStyle = isHovered ? '#f59e0b' : (theme === "light" ? '#1F2937' : '#D1D5DB'); ctx.fill();
+                ctx.closePath(); ctx.fillStyle = edgeColor; ctx.fill();
             }
         });
         
@@ -173,18 +195,16 @@ export const useCanvas = (nodes, edges, theme, graphType, algorithmResults, setN
             ctx.fillText(node.value, node.x, node.y);
         });
 
-        // --- NEW: Render Dijkstra distances on canvas ---
-        const { dijkstraResult, currentAlgorithm } = algorithmResults;
-        if (currentAlgorithm === 'Dijkstra' && dijkstraResult?.distances) {
+        const { dijkstraResult, bellmanFordResult, currentAlgorithm } = algorithmResults;
+        const distanceData = currentAlgorithm === 'Dijkstra' ? dijkstraResult : bellmanFordResult;
+        if ((currentAlgorithm === 'Dijkstra' || currentAlgorithm === 'BellmanFord') && distanceData?.distances) {
             nodes.forEach(node => {
-                const distance = dijkstraResult.distances[node.id];
+                const distance = distanceData.distances[node.id];
                 if (distance !== undefined) {
                     const text = distance === Infinity ? '∞' : distance.toFixed(1);
                     ctx.font = 'bold 14px sans-serif';
-                    // Use a bright, distinct color for the text
                     ctx.fillStyle = theme === 'light' ? '#86198f' : '#f0abfc'; 
                     ctx.textAlign = 'center';
-                    // Position it above the node, clearing a small area for readability
                     const textWidth = ctx.measureText(text).width;
                     ctx.clearRect(node.x - textWidth / 2 - 4, node.y - 55, textWidth + 8, 20);
                     ctx.fillText(text, node.x, node.y - 45);
@@ -203,26 +223,22 @@ export const useCanvas = (nodes, edges, theme, graphType, algorithmResults, setN
         if (hoveredElement && hoveredElement.type === 'node') {
             const hoveredNode = nodes.find(n => n.id === hoveredElement.id), degrees = nodeDegrees[hoveredElement.id];
             if (hoveredNode && degrees) {
-                const posX = hoveredNode.x, posY = hoveredNode.y - (dijkstraResult ? 60 : 45); // Adjust position if distances are shown
+                const posY = hoveredNode.y - (distanceData ? 60 : 45);
                 ctx.font = 'bold 12px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
                 const boxPadding = 8, textToDisplay = graphType === 'directed' ? `In: ${degrees.in} | Out: ${degrees.out}` : `Degree: ${degrees.degree}`;
                 const textWidth = ctx.measureText(textToDisplay).width, boxWidth = textWidth + boxPadding * 2, boxHeight = 12 + boxPadding * 2;
                 ctx.fillStyle = theme === 'light' ? 'rgba(255, 255, 255, 0.9)' : 'rgba(30, 41, 59, 0.9)';
                 ctx.strokeStyle = theme === 'light' ? '#a5b4fc' : '#4f46e5'; ctx.lineWidth = 1.5;
-                ctx.beginPath(); ctx.roundRect(posX - boxWidth / 2, posY - boxHeight, boxWidth, boxHeight, [8]); ctx.fill(); ctx.stroke();
+                ctx.beginPath(); ctx.roundRect(hoveredNode.x - boxWidth / 2, posY - boxHeight, boxWidth, boxHeight, [8]); ctx.fill(); ctx.stroke();
                 ctx.fillStyle = theme === 'light' ? '#1e293b' : '#e0e7ff';
-                ctx.fillText(textToDisplay, posX, posY - boxPadding);
+                ctx.fillText(textToDisplay, hoveredNode.x, posY - boxPadding);
             }
         }
     }, [nodes, edges, theme, hoveredElement, algorithmResults, isDrawingEdge, nodeDegrees, graphType]);
 
     useEffect(() => {
         let isAnimating = true;
-        const renderLoop = () => {
-            if (!isAnimating) return;
-            drawGraph();
-            animationFrameRef.current = requestAnimationFrame(renderLoop);
-        };
+        const renderLoop = () => { if (!isAnimating) return; drawGraph(); animationFrameRef.current = requestAnimationFrame(renderLoop); };
         renderLoop();
         return () => { isAnimating = false; cancelAnimationFrame(animationFrameRef.current); };
     }, [drawGraph]);
@@ -230,29 +246,18 @@ export const useCanvas = (nodes, edges, theme, graphType, algorithmResults, setN
     useEffect(() => {
         let resizeTimer;
         const handleResize = () => { clearTimeout(resizeTimer); resizeTimer = setTimeout(() => { drawGraph(); }, 100); };
-        window.addEventListener('resize', handleResize);
-        drawGraph();
+        window.addEventListener('resize', handleResize); drawGraph();
         return () => { window.removeEventListener('resize', handleResize); clearTimeout(resizeTimer); };
     }, [drawGraph]);
 
-    const startDrag = (nodeId, mouseX, mouseY) => {
-        setDraggingId(nodeId); const node = nodes.find(n => n.id === nodeId);
-        if (node) setOffset({ x: mouseX - node.x, y: mouseY - node.y });
-    };
-    
+    const startDrag = (nodeId, mouseX, mouseY) => { setDraggingId(nodeId); const node = nodes.find(n => n.id === nodeId); if (node) setOffset({ x: mouseX - node.x, y: mouseY - node.y }); };
     const dragNode = (mouseX, mouseY) => {
         if (draggingId === null) return;
         const rect = containerRef.current.getBoundingClientRect();
-        const newX = Math.max(40, Math.min(rect.width - 40, mouseX - offset.x));
-        const newY = Math.max(40, Math.min(rect.height - 40, mouseY - offset.y));
+        const newX = Math.max(40, Math.min(rect.width - 40, mouseX - offset.x)), newY = Math.max(40, Math.min(rect.height - 40, mouseY - offset.y));
         setNodes(currentNodes => currentNodes.map(node => node.id === draggingId ? { ...node, x: newX, y: newY } : node));
     };
-
     const endDrag = () => { setDraggingId(null); };
 
-    return {
-        canvasRef, containerRef, contextMenu, setContextMenu, closeContextMenu: () => setContextMenu(prev => ({ ...prev, visible: false })),
-        isDrawingEdge, setIsDrawingEdge, hoveredElement, setHoveredElement,
-        startDrag, dragNode, endDrag
-    };
+    return { canvasRef, containerRef, contextMenu, setContextMenu, closeContextMenu: () => setContextMenu(prev => ({ ...prev, visible: false })), isDrawingEdge, setIsDrawingEdge, hoveredElement, setHoveredElement, startDrag, dragNode, endDrag };
 };

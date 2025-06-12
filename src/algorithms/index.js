@@ -314,7 +314,7 @@ export const generateAStarResult = (nodes, edges, graphType, startId, targetId, 
 
 /* ==== Bellman Ford ==== */
 
-export const generateBellmanFordSteps = (nodes, edges, startNodeId) => {
+export const generateBellmanFordSteps = (nodes, edges, graphType, startNodeId) => {
     if (nodes.length === 0 || !startNodeId) {
         return { steps: [], distances: {}, predecessors: {}, negativeCycle: null };
     }
@@ -322,9 +322,7 @@ export const generateBellmanFordSteps = (nodes, edges, startNodeId) => {
     const steps = [];
     const distances = {};
     const predecessors = {};
-    const startNode = nodes.find(n => n.id === startNodeId);
 
-    // 1. Initialize distances
     nodes.forEach(node => {
         distances[node.id] = Infinity;
         predecessors[node.id] = null;
@@ -332,96 +330,123 @@ export const generateBellmanFordSteps = (nodes, edges, startNodeId) => {
     distances[startNodeId] = 0;
 
     steps.push({
-        description: `Initialization: Distance to start node ${startNode?.value} is 0. All others are ∞.`,
+        type: 'initial',
+        description: `Initialization: Distance to start node is 0. All others are ∞.`,
         distances: { ...distances },
-        highlightedEdge: null,
-        negativeCycle: null,
+        highlightedEdgeId: null,
+        updatedNodeId: null,
+        passNumber: 0,
+        negativeCyclePath: null,
     });
 
-    // 2. Relax edges repeatedly (V-1 times)
     for (let i = 1; i < nodes.length; i++) {
-        let relaxedAnEdgeInPass = false; // Use a different name to be clear
+        let updatedInPass = false;
         for (const edge of edges) {
             steps.push({
-                description: `Pass ${i}, checking edge...`,
+                type: 'check_edge',
+                description: `Pass ${i}: Checking edge ${edge.id}...`,
                 distances: { ...distances },
-                highlightedEdge: edge.id,
-                negativeCycle: null,
+                highlightedEdgeId: edge.id,
+                updatedNodeId: null,
+                passNumber: i,
             });
 
-            // Check forward direction: start -> end
+            // --- FIX: Check both directions for undirected graphs ---
+            
+            // Direction 1: start -> end
             if (distances[edge.start] !== Infinity && distances[edge.start] + edge.weight < distances[edge.end]) {
                 distances[edge.end] = distances[edge.start] + edge.weight;
-                predecessors[edge.end] = edge.start;
-                relaxedAnEdgeInPass = true;
+                predecessors[edge.end] = { nodeId: edge.start, edgeId: edge.id };
+                updatedInPass = true;
+                steps.push({
+                    type: 'update_distance',
+                    description: `Pass ${i}: Updated distance for node.`,
+                    distances: { ...distances },
+                    highlightedEdgeId: edge.id,
+                    updatedNodeId: edge.end,
+                    passNumber: i,
+                });
             }
-            
-            // Check reverse direction: end -> start
-            if (distances[edge.end] !== Infinity && distances[edge.end] + edge.weight < distances[edge.start]) {
+
+            // Direction 2: end -> start (for undirected)
+            if (graphType === 'undirected' && distances[edge.end] !== Infinity && distances[edge.end] + edge.weight < distances[edge.start]) {
                 distances[edge.start] = distances[edge.end] + edge.weight;
-                predecessors[edge.start] = edge.end;
-                relaxedAnEdgeInPass = true;
+                predecessors[edge.start] = { nodeId: edge.end, edgeId: edge.id };
+                updatedInPass = true;
+                steps.push({
+                    type: 'update_distance',
+                    description: `Pass ${i}: Updated distance for node.`,
+                    distances: { ...distances },
+                    highlightedEdgeId: edge.id,
+                    updatedNodeId: edge.start,
+                    passNumber: i,
+                });
             }
         }
-        // Optimization: If a full pass completes with no relaxation, we can stop.
-        if (!relaxedAnEdgeInPass) {
-            steps.push({
-                description: `Pass ${i} completed with no changes. Stopping early.`,
-                distances: { ...distances },
-                highlightedEdge: null,
-                negativeCycle: null,
-            });
-            break;
-        }
+        if (!updatedInPass) break;
     }
 
-    // 3. Check for negative weight cycles
-    let negativeCycleNode = null;
+    let negativeCyclePath = null;
     for (const edge of edges) {
         if (distances[edge.start] !== Infinity && distances[edge.start] + edge.weight < distances[edge.end]) {
-            // Negative cycle detected!
-            negativeCycleNode = edge.end; // This node is part of or reachable from a cycle
+             let cycleNode = edge.end;
+             for (let i = 0; i < nodes.length; i++) {
+                cycleNode = predecessors[cycleNode]?.nodeId;
+             }
+             const cycle = [];
+             let current = cycleNode;
+             while (true) {
+                cycle.push(current);
+                const prev = predecessors[current];
+                if (!prev) break;
+                current = prev.nodeId;
+                if (current === cycleNode) { cycle.push(current); break; }
+             }
+             negativeCyclePath = cycle.reverse();
+             break;
+        }
+        // --- FIX: Check for negative cycles in reverse direction too ---
+        if (graphType === 'undirected' && distances[edge.end] !== Infinity && distances[edge.end] + edge.weight < distances[edge.start]) {
+            let cycleNode = edge.start;
+            for (let i = 0; i < nodes.length; i++) {
+               cycleNode = predecessors[cycleNode]?.nodeId;
+            }
+            const cycle = [];
+            let current = cycleNode;
+            while (true) {
+               cycle.push(current);
+               const prev = predecessors[current];
+               if (!prev) break;
+               current = prev.nodeId;
+               if (current === cycleNode) { cycle.push(current); break; }
+            }
+            negativeCyclePath = cycle.reverse();
             break;
         }
     }
 
-    let finalCyclePath = null;
-    if (negativeCycleNode) {
-        // Backtrack to find a node that is definitely IN the cycle.
-        let nodeInCycle = negativeCycleNode;
-        for (let i = 0; i < nodes.length; i++) {
-            nodeInCycle = predecessors[nodeInCycle];
-        }
-
-        // Now trace the cycle starting from this known cycle node.
-        finalCyclePath = [];
-        let currentNode = nodeInCycle;
-        while (true) {
-            finalCyclePath.push(currentNode);
-            currentNode = predecessors[currentNode];
-            if (currentNode === nodeInCycle) {
-                finalCyclePath.push(currentNode);
-                break;
-            }
-        }
-        finalCyclePath.reverse();
-
+    if (negativeCyclePath) {
         steps.push({
-            description: `Negative weight cycle detected! Shortest paths are undefined.`,
+            type: 'negative_cycle',
+            description: "Negative weight cycle detected!",
             distances: { ...distances },
-            highlightedEdge: null,
-            negativeCycle: finalCyclePath,
+            highlightedEdgeId: null,
+            updatedNodeId: null,
+            passNumber: nodes.length,
+            negativeCyclePath: negativeCyclePath,
         });
     } else {
         steps.push({
+            type: 'done',
             description: "Algorithm finished. No negative cycles found.",
             distances: { ...distances },
-            highlightedEdge: null,
-            negativeCycle: null,
+            highlightedEdgeId: null,
+            updatedNodeId: null,
+            passNumber: nodes.length,
         });
     }
 
-    return { steps, distances, predecessors, negativeCycle: finalCyclePath };
+    return { steps, distances, predecessors, negativeCycle: negativeCyclePath };
 };
 
 /* ==== Prim's ==== */
