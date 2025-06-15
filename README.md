@@ -22,9 +22,6 @@
 
 <br />
 
- 
-*(Suggestion: Take a beautiful screenshot of your app, upload it to a site like Imgur, and paste the URL here)*
-
 ---
 
 ## ✨ Features
