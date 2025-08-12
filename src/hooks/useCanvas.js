@@ -50,7 +50,7 @@ const getNodeStyle = (node, isHovered, algorithmResults, edges) => {
             (currentAlgorithm === 'AStar' && aStarResult?.currentNodeId === node.id) ||
             (currentAlgorithm === 'BellmanFord' && bellmanFordResult?.updatedNodeId === node.id) ||
             (currentAlgorithm === 'Kruskal' && kruskalResult.type === 'accept_edge' && isCurrentEdgeNode(kruskalResult.currentEdgeId))
-            (currentAlgorithm === 'TopologicalSort' && topoSortResult?.currentNodeId === node.id)
+            // (currentAlgorithm === 'TopologicalSort' && topoSortResult?.currentNodeId === node.id)
         ) { state = 'current'; shouldPulse = true; }
         else if (currentAlgorithm === 'BellmanFord' && bellmanFordResult?.highlightedEdgeId && isCurrentEdgeNode(bellmanFordResult.highlightedEdgeId)) state = 'exploring';
         else if (currentAlgorithm === 'AStar' && aStarResult?.openSet?.has(node.id)) state = 'openSet';
