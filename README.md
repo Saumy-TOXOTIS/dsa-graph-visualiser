@@ -87,7 +87,7 @@ Ensure you have Node.js (v18 or later) and npm installed on your machine.
 
 1.  **Clone the Repository**
     ```sh
-    git clone https://github.com/YOUR_GITHUB_USERNAME/dsa-graph-visualiser.git
+    git clone https://github.com/Saumy-TOXOTIS/dsa-graph-visualiser.git
     ```
 2.  **Navigate to the Project Directory**
     ```sh
